@@ -333,7 +333,10 @@ document.addEventListener('alpine:init', () => {
                 body: JSON.stringify(payload) 
             });
             if(res.ok) { 
-                this.showFeedback("✓ Tabungan bertambah"); 
+                // Otomatis catat sebagai pengeluaran agar memotong budget
+                await this.submitTransaction(amount, `Menabung: ${goal.name}`, null);
+                
+                this.showFeedback("✓ Tabungan & Transaksi tercatat"); 
                 this.loadInitialData(); 
             } else {
                 this.showFeedback("❌ Gagal menambah tabungan", true);

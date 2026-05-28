@@ -23,6 +23,12 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 		return model.BudgetAggregation{}, err
 	}
 
+	var totalSpent int64
+	err = r.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE strftime('%Y-%m', transacted_at) = ?", yearMonth).Scan(&totalSpent)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.BudgetAggregation{}, err
+	}
+
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT c.id, c.name, SUM(t.amount) as total
 		FROM categories c
@@ -35,7 +41,6 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 	}
 	defer func() { _ = rows.Close() }()
 
-	var totalSpent int64
 	var spendingByCategory []model.CategorySpending
 
 	for rows.Next() {
@@ -43,7 +48,6 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 		if err := rows.Scan(&cat.CategoryID, &cat.CategoryName, &cat.Total); err != nil {
 			return model.BudgetAggregation{}, err
 		}
-		totalSpent += cat.Total
 		spendingByCategory = append(spendingByCategory, cat)
 	}
 	if err := rows.Err(); err != nil {
