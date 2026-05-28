@@ -27,6 +27,8 @@ document.addEventListener('alpine:init', () => {
         pendingSync: 0,
         
         feedback: { show: false, message: '', isError: false },
+        
+        db: null, // IndexedDB instance
 
         // ==========================================
         // GETTERS / COMPUTED
@@ -41,15 +43,114 @@ document.addEventListener('alpine:init', () => {
         // ==========================================
         // ACTIONS / METHODS
         // ==========================================
-        init() {
+        async init() {
             // Register event listeners for network status on window
             window.addEventListener('online', () => this.updateOfflineStatus(false));
             window.addEventListener('offline', () => this.updateOfflineStatus(true));
+
+            // Initialize IndexedDB
+            await this.initDB();
 
             // Load initial app data
             this.loadInitialData();
         },
 
+        // ==========================================
+        // INDEXEDDB LOGIC (OFFLINE STORAGE)
+        // ==========================================
+        async initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('finance_db', 1);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('sync_queue')) {
+                        db.createObjectStore('sync_queue', { keyPath: 'client_transaction_id' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    this.checkPendingSync();
+                    resolve(this.db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('IndexedDB error:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        },
+
+        async saveToSyncQueue(transaction) {
+            return new Promise((resolve, reject) => {
+                if (!this.db) return reject('DB not initialized');
+                const tx = this.db.transaction('sync_queue', 'readwrite');
+                const store = tx.objectStore('sync_queue');
+                const req = store.put(transaction);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        },
+
+        async getSyncQueue() {
+            return new Promise((resolve, reject) => {
+                if (!this.db) return resolve([]);
+                const tx = this.db.transaction('sync_queue', 'readonly');
+                const store = tx.objectStore('sync_queue');
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        },
+
+        async clearSyncQueue() {
+            return new Promise((resolve, reject) => {
+                if (!this.db) return resolve();
+                const tx = this.db.transaction('sync_queue', 'readwrite');
+                const store = tx.objectStore('sync_queue');
+                const req = store.clear();
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        },
+
+        async checkPendingSync() {
+            const queue = await this.getSyncQueue();
+            this.pendingSync = queue.length;
+        },
+
+        async syncTransactions() {
+            if (this.isOffline) return;
+            
+            const queue = await this.getSyncQueue();
+            if (queue.length === 0) return;
+
+            try {
+                this.showFeedback("Mulai sinkronisasi data...", false);
+                const res = await fetch('/api/v1/sync/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transactions: queue })
+                });
+
+                if (res.ok) {
+                    await this.clearSyncQueue();
+                    this.pendingSync = 0;
+                    await this.loadInitialData(); // Refresh UI without pending local data
+                    this.showFeedback(`✓ Sinkronisasi berhasil (${queue.length} transaksi)`, false);
+                } else {
+                    console.error("Gagal sinkronisasi data");
+                    this.showFeedback("❌ Gagal sinkronisasi", true);
+                }
+            } catch (err) {
+                console.error("Sinkronisasi tertunda (jaringan bermasalah)", err);
+            }
+        },
+
+        // ==========================================
+        // UI AND DATA FETCHING
+        // ==========================================
         changeView(viewName) {
             const validViews = ['input', 'dashboard', 'history', 'settings'];
             if (validViews.includes(viewName)) {
@@ -78,10 +179,23 @@ document.addEventListener('alpine:init', () => {
                     fetch(`/api/v1/transactions?year_month=${month}`).then(r => r.ok ? r.json() : [])
                 ]);
 
+                const pendingTxs = await this.getSyncQueue();
+
                 this.categories = cats || [];
-                this.budget = budg || { total_budget: 0, total_spent: 0, remaining_balance: 0 };
                 this.savingsGoals = sav || [];
-                this.recentTransactions = txs || [];
+                
+                // Optimistic UI: Merge remote transactions with pending offline transactions
+                this.recentTransactions = [...pendingTxs, ...(txs || [])].sort((a, b) => new Date(b.transacted_at) - new Date(a.transacted_at));
+                
+                // Optimistic UI: Adjust budget based on pending transactions
+                let pendingSpent = pendingTxs.reduce((sum, tx) => sum + tx.amount, 0);
+                let actualBudget = budg || { total_budget: 0, total_spent: 0, remaining_balance: 0 };
+                
+                this.budget = {
+                    total_budget: actualBudget.total_budget,
+                    total_spent: actualBudget.total_spent + pendingSpent,
+                    remaining_balance: actualBudget.remaining_balance - pendingSpent
+                };
                 
                 console.log('Initial data loaded successfully');
             } catch (error) {
@@ -103,9 +217,13 @@ document.addEventListener('alpine:init', () => {
             };
 
             if (this.isOffline) {
-                // To be implemented: store in IndexedDB and sync later
-                this.pendingSync++;
-                this.showFeedback("Ditambahkan ke antrean offline", false);
+                // Store in IndexedDB and sync later
+                await this.saveToSyncQueue(payload);
+                await this.checkPendingSync();
+                
+                // Refresh UI optimistically
+                await this.loadInitialData();
+                this.showFeedback("✓ Tersimpan offline di antrean", false);
                 return;
             }
 
@@ -125,7 +243,12 @@ document.addEventListener('alpine:init', () => {
                 }
             } catch (err) {
                 console.error('Submit transaction error:', err);
-                this.showFeedback("Kesalahan jaringan", true);
+                
+                // Fallback to offline queue if network fails completely despite being "online"
+                await this.saveToSyncQueue(payload);
+                await this.checkPendingSync();
+                await this.loadInitialData();
+                this.showFeedback("✓ Jaringan terputus, tersimpan offline", false);
             }
         },
 
@@ -140,7 +263,7 @@ document.addEventListener('alpine:init', () => {
 
         async setBudget(amount) {
             if (this.isOffline) {
-                alert("Anda harus online untuk mengubah anggaran.");
+                this.showFeedback("❌ Harus online untuk mengubah anggaran", true);
                 return;
             }
             
@@ -153,13 +276,14 @@ document.addEventListener('alpine:init', () => {
                 
                 if (res.ok) {
                     await this.loadInitialData();
-                    alert("Anggaran bulanan berhasil diperbarui.");
+                    this.showFeedback("✓ Anggaran diperbarui", false);
                 } else {
                     const err = await res.json();
-                    alert("Gagal mengatur anggaran: " + err.error);
+                    this.showFeedback("Gagal mengatur anggaran: " + err.error, true);
                 }
             } catch (err) {
                 console.error('Set budget error:', err);
+                this.showFeedback("❌ Kesalahan jaringan", true);
             }
         },
 
@@ -173,7 +297,7 @@ document.addEventListener('alpine:init', () => {
             
             if (!status && this.pendingSync > 0) {
                 console.log('Back online. Ready to sync pending transactions...');
-                // Implement trigger sync process here later
+                this.syncTransactions();
             }
         }
     });
