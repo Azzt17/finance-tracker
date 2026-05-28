@@ -16,8 +16,8 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-func (r *TransactionRepository) List(ctx context.Context) (transactions []model.Transaction, err error) {
-	rows, err := r.db.QueryContext(ctx, `
+func (r *TransactionRepository) List(ctx context.Context, yearMonth string, categoryID *int64, limit, offset int) (transactions []model.Transaction, err error) {
+	query := `
 		SELECT id,
 			client_transaction_id,
 			amount,
@@ -27,8 +27,19 @@ func (r *TransactionRepository) List(ctx context.Context) (transactions []model.
 			created_at,
 			is_synced
 		FROM transactions
-		ORDER BY transacted_at DESC, id DESC
-	`)
+		WHERE strftime('%Y-%m', transacted_at) = ?
+	`
+	args := []any{yearMonth}
+
+	if categoryID != nil {
+		query += " AND category_id = ?"
+		args = append(args, *categoryID)
+	}
+
+	query += " ORDER BY transacted_at DESC, id DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

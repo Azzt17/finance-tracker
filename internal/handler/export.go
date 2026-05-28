@@ -11,7 +11,7 @@ import (
 )
 
 type ExportRepository interface {
-	GetAggregation(ctx context.Context, yearMonth string) (BudgetAggregation, error)
+	GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error)
 	ListTransactions(ctx context.Context, yearMonth string) ([]model.Transaction, error)
 }
 

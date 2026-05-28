@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azzt17/finance-tracker/internal/database"
 	"github.com/Azzt17/finance-tracker/internal/handler"
+	"github.com/Azzt17/finance-tracker/web"
 )
 
 func main() {
@@ -36,9 +37,15 @@ func main() {
 	}
 	slog.Info("database migrated")
 
+	if err := database.Seed(ctx, db); err != nil {
+		slog.Error("database seeding failed", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("database seeded")
+
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           handler.NewRouter(handler.Config{StaticDir: "web", DB: db}),
+		Handler:           handler.NewRouter(handler.Config{StaticFS: web.StaticFS, DB: db}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

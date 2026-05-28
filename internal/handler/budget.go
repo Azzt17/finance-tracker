@@ -3,24 +3,12 @@ package handler
 import (
 	"context"
 	"net/http"
+
+	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
-type CategorySpending struct {
-	CategoryID   int64  `json:"category_id"`
-	CategoryName string `json:"category_name"`
-	Total        int64  `json:"total"`
-}
-
-type BudgetAggregation struct {
-	YearMonth          string             `json:"year_month"`
-	TotalBudget        int64              `json:"total_budget"`
-	TotalSpent         int64              `json:"total_spent"`
-	RemainingBalance   int64              `json:"remaining_balance"`
-	SpendingByCategory []CategorySpending `json:"spending_by_category"`
-}
-
 type BudgetRepository interface {
-	GetAggregation(ctx context.Context, yearMonth string) (BudgetAggregation, error)
+	GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error)
 	SetTotalBudget(ctx context.Context, yearMonth string, totalBudget int64) error
 }
 
@@ -51,7 +39,7 @@ func (h *BudgetHandler) get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if agg.SpendingByCategory == nil {
-		agg.SpendingByCategory = []CategorySpending{}
+		agg.SpendingByCategory = []model.CategorySpending{}
 	}
 	writeJSON(w, http.StatusOK, agg)
 }

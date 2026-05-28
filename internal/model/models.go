@@ -35,6 +35,20 @@ type BudgetAllocationInput struct {
 	TotalBudget int64  `json:"total_budget"`
 }
 
+type CategorySpending struct {
+	CategoryID   int64  `json:"category_id"`
+	CategoryName string `json:"category_name"`
+	Total        int64  `json:"total"`
+}
+
+type BudgetAggregation struct {
+	YearMonth          string             `json:"year_month"`
+	TotalBudget        int64              `json:"total_budget"`
+	TotalSpent         int64              `json:"total_spent"`
+	RemainingBalance   int64              `json:"remaining_balance"`
+	SpendingByCategory []CategorySpending `json:"spending_by_category"`
+}
+
 type Category struct {
 	ID         int64     `json:"id"`
 	Name       string    `json:"name"`

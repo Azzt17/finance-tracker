@@ -8,146 +8,71 @@ import (
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
-type BudgetAllocationRepository struct {
+type BudgetRepository struct {
 	db *sql.DB
 }
 
-func NewBudgetAllocationRepository(db *sql.DB) *BudgetAllocationRepository {
-	return &BudgetAllocationRepository{db: db}
+func NewBudgetRepository(db *sql.DB) *BudgetRepository {
+	return &BudgetRepository{db: db}
 }
 
-func (r *BudgetAllocationRepository) List(ctx context.Context) (budgets []model.BudgetAllocation, err error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, year_month, total_budget, created_at, updated_at
-		FROM budget_allocation
-		ORDER BY year_month DESC, id DESC
-	`)
-	if err != nil {
-		return nil, err
+func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error) {
+	var totalBudget int64
+	err := r.db.QueryRowContext(ctx, "SELECT total_budget FROM budget_allocation WHERE year_month = ?", yearMonth).Scan(&totalBudget)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.BudgetAggregation{}, err
 	}
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}()
 
-	budgets = []model.BudgetAllocation{}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT c.id, c.name, SUM(t.amount) as total
+		FROM categories c
+		JOIN transactions t ON c.id = t.category_id
+		WHERE strftime('%Y-%m', t.transacted_at) = ?
+		GROUP BY c.id, c.name
+	`, yearMonth)
+	if err != nil {
+		return model.BudgetAggregation{}, err
+	}
+	defer rows.Close()
+
+	var totalSpent int64
+	var spendingByCategory []model.CategorySpending
+
 	for rows.Next() {
-		budget, err := scanBudgetAllocation(rows)
-		if err != nil {
-			return nil, err
+		var cat model.CategorySpending
+		if err := rows.Scan(&cat.CategoryID, &cat.CategoryName, &cat.Total); err != nil {
+			return model.BudgetAggregation{}, err
 		}
-		budgets = append(budgets, budget)
+		totalSpent += cat.Total
+		spendingByCategory = append(spendingByCategory, cat)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return model.BudgetAggregation{}, err
 	}
 
-	return budgets, nil
+	if spendingByCategory == nil {
+		spendingByCategory = []model.CategorySpending{}
+	}
+
+	return model.BudgetAggregation{
+		YearMonth:          yearMonth,
+		TotalBudget:        totalBudget,
+		TotalSpent:         totalSpent,
+		RemainingBalance:   totalBudget - totalSpent,
+		SpendingByCategory: spendingByCategory,
+	}, nil
 }
 
-func (r *BudgetAllocationRepository) Create(ctx context.Context, input model.BudgetAllocationInput) (model.BudgetAllocation, error) {
-	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO budget_allocation (year_month, total_budget)
-		VALUES (?, ?)
-	`, input.YearMonth, input.TotalBudget)
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	return r.Get(ctx, id)
-}
-
-func (r *BudgetAllocationRepository) Get(ctx context.Context, id int64) (model.BudgetAllocation, error) {
-	budget, err := scanBudgetAllocation(r.db.QueryRowContext(ctx, `
-		SELECT id, year_month, total_budget, created_at, updated_at
-		FROM budget_allocation
-		WHERE id = ?
-	`, id))
+func (r *BudgetRepository) SetTotalBudget(ctx context.Context, yearMonth string, totalBudget int64) error {
+	var id int64
+	err := r.db.QueryRowContext(ctx, "SELECT id FROM budget_allocation WHERE year_month = ?", yearMonth).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return model.BudgetAllocation{}, ErrNotFound
-	}
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	return budget, nil
-}
-
-func (r *BudgetAllocationRepository) Update(ctx context.Context, id int64, input model.BudgetAllocationInput) (model.BudgetAllocation, error) {
-	result, err := r.db.ExecContext(ctx, `
-		UPDATE budget_allocation
-		SET year_month = ?, total_budget = ?, updated_at = datetime('now')
-		WHERE id = ?
-	`, input.YearMonth, input.TotalBudget, id)
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-	if affected == 0 {
-		return model.BudgetAllocation{}, ErrNotFound
-	}
-
-	return r.Get(ctx, id)
-}
-
-func (r *BudgetAllocationRepository) Delete(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM budget_allocation WHERE id = ?`, id)
-	if err != nil {
+		_, err = r.db.ExecContext(ctx, "INSERT INTO budget_allocation (year_month, total_budget) VALUES (?, ?)", yearMonth, totalBudget)
+		return err
+	} else if err != nil {
 		return err
 	}
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return ErrNotFound
-	}
-
-	return nil
-}
-
-type budgetAllocationScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanBudgetAllocation(scanner budgetAllocationScanner) (model.BudgetAllocation, error) {
-	var (
-		budget    model.BudgetAllocation
-		createdAt string
-		updatedAt string
-	)
-	if err := scanner.Scan(
-		&budget.ID,
-		&budget.YearMonth,
-		&budget.TotalBudget,
-		&createdAt,
-		&updatedAt,
-	); err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	parsedCreatedAt, err := parseDBTime(createdAt)
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-	parsedUpdatedAt, err := parseDBTime(updatedAt)
-	if err != nil {
-		return model.BudgetAllocation{}, err
-	}
-
-	budget.CreatedAt = parsedCreatedAt
-	budget.UpdatedAt = parsedUpdatedAt
-
-	return budget, nil
+	_, err = r.db.ExecContext(ctx, "UPDATE budget_allocation SET total_budget = ?, updated_at = datetime('now') WHERE id = ?", totalBudget, id)
+	return err
 }
