@@ -1,76 +1,116 @@
 package handler
 
 import (
+	"context"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
-type TransactionHandler struct{}
+type TransactionRepository interface {
+	List(ctx context.Context, yearMonth string, categoryID *int64, limit, offset int) ([]model.Transaction, error)
+	Create(ctx context.Context, input model.TransactionInput) (model.Transaction, error)
+	Get(ctx context.Context, id int64) (model.Transaction, error)
+	Delete(ctx context.Context, id int64) error
+}
 
-func NewTransactionHandler() *TransactionHandler {
-	return &TransactionHandler{}
+type TransactionHandler struct {
+	repository TransactionRepository
+}
+
+func NewTransactionHandler(repository TransactionRepository) *TransactionHandler {
+	return &TransactionHandler{repository: repository}
 }
 
 func (h *TransactionHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/transactions", h.list)
 	mux.HandleFunc("POST /api/v1/transactions", h.create)
-	mux.HandleFunc("GET /api/v1/transactions/{id}", h.get)
-	mux.HandleFunc("PUT /api/v1/transactions/{id}", h.update)
 	mux.HandleFunc("DELETE /api/v1/transactions/{id}", h.delete)
 }
 
-func (h *TransactionHandler) list(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": []model.Transaction{},
-	})
+func (h *TransactionHandler) list(w http.ResponseWriter, r *http.Request) {
+	yearMonth := r.URL.Query().Get("year_month")
+	if yearMonth == "" {
+		writeError(w, http.StatusBadRequest, "year_month is required (format YYYY-MM)", "VALIDATION_ERROR")
+		return
+	}
+
+	var categoryID *int64
+	if cidStr := r.URL.Query().Get("category_id"); cidStr != "" {
+		cid, err := strconv.ParseInt(cidStr, 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid category_id", "VALIDATION_ERROR")
+			return
+		}
+		categoryID = &cid
+	}
+
+	limit := 50
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil {
+			limit = l
+		}
+	}
+
+	offset := 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil {
+			offset = o
+		}
+	}
+
+	transactions, err := h.repository.List(r.Context(), yearMonth, categoryID, limit, offset)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	if transactions == nil {
+		transactions = []model.Transaction{}
+	}
+	writeJSON(w, http.StatusOK, transactions)
 }
 
 func (h *TransactionHandler) create(w http.ResponseWriter, r *http.Request) {
 	var input model.TransactionInput
 	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error(), "VALIDATION_ERROR")
 		return
 	}
 
-	transaction := model.Transaction{
-		ID:          "pending",
-		CategoryID:  input.CategoryID,
-		Type:        input.Type,
-		Amount:      input.Amount,
-		Description: input.Description,
-		OccurredAt:  input.OccurredAt,
-		CreatedAt:   time.Now().UTC(),
+	if input.ClientTransactionID == "" {
+		writeError(w, http.StatusBadRequest, "client_transaction_id is required", "VALIDATION_ERROR")
+		return
 	}
-
-	writeJSON(w, http.StatusCreated, envelope{
-		"data": transaction,
-	})
-}
-
-func (h *TransactionHandler) get(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
-}
-
-func (h *TransactionHandler) update(w http.ResponseWriter, r *http.Request) {
-	var input model.TransactionInput
-	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+	if input.Amount == 0 {
+		writeError(w, http.StatusBadRequest, "amount is required", "VALIDATION_ERROR")
+		return
+	}
+	if input.CategoryID == nil {
+		writeError(w, http.StatusBadRequest, "category_id is required", "VALIDATION_ERROR")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
+	transaction, err := h.repository.Create(r.Context(), input)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, transaction)
 }
 
-func (h *TransactionHandler) delete(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusNoContent, nil)
+func (h *TransactionHandler) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid transaction id", "VALIDATION_ERROR")
+		return
+	}
+	if err := h.repository.Delete(r.Context(), id); err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "deleted successfully"})
 }

@@ -1,73 +1,84 @@
 package handler
 
 import (
+	"context"
 	"net/http"
-	"time"
 
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
-type CategoryHandler struct{}
+type CategoryRepository interface {
+	List(ctx context.Context) ([]model.Category, error)
+	Create(ctx context.Context, input model.CategoryInput) (model.Category, error)
+	Update(ctx context.Context, id int64, input model.CategoryInput) (model.Category, error)
+}
 
-func NewCategoryHandler() *CategoryHandler {
-	return &CategoryHandler{}
+type CategoryHandler struct {
+	repository CategoryRepository
+}
+
+func NewCategoryHandler(repository CategoryRepository) *CategoryHandler {
+	return &CategoryHandler{repository: repository}
 }
 
 func (h *CategoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/categories", h.list)
 	mux.HandleFunc("POST /api/v1/categories", h.create)
-	mux.HandleFunc("GET /api/v1/categories/{id}", h.get)
-	mux.HandleFunc("PUT /api/v1/categories/{id}", h.update)
-	mux.HandleFunc("DELETE /api/v1/categories/{id}", h.delete)
+	mux.HandleFunc("PATCH /api/v1/categories/{id}", h.update)
 }
 
-func (h *CategoryHandler) list(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": []model.Category{},
-	})
+func (h *CategoryHandler) list(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.repository.List(r.Context())
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	if categories == nil {
+		categories = []model.Category{}
+	}
+	writeJSON(w, http.StatusOK, categories)
 }
 
 func (h *CategoryHandler) create(w http.ResponseWriter, r *http.Request) {
 	var input model.CategoryInput
 	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error(), "VALIDATION_ERROR")
 		return
 	}
 
-	category := model.Category{
-		ID:        "pending",
-		Name:      input.Name,
-		Type:      input.Type,
-		CreatedAt: time.Now().UTC(),
+	if input.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required", "VALIDATION_ERROR")
+		return
 	}
 
-	writeJSON(w, http.StatusCreated, envelope{
-		"data": category,
-	})
-}
+	category, err := h.repository.Create(r.Context(), input)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
 
-func (h *CategoryHandler) get(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
+	writeJSON(w, http.StatusCreated, category)
 }
 
 func (h *CategoryHandler) update(w http.ResponseWriter, r *http.Request) {
 	var input model.CategoryInput
 	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error(), "VALIDATION_ERROR")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
-}
+	id, err := parseID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category id", "VALIDATION_ERROR")
+		return
+	}
 
-func (h *CategoryHandler) delete(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusNoContent, nil)
+	category, err := h.repository.Update(r.Context(), id, input)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, category)
 }

@@ -1,74 +1,80 @@
 package handler
 
 import (
+	"context"
 	"net/http"
-	"time"
-
-	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
-type BudgetHandler struct{}
+type CategorySpending struct {
+	CategoryID   int64  `json:"category_id"`
+	CategoryName string `json:"category_name"`
+	Total        int64  `json:"total"`
+}
 
-func NewBudgetHandler() *BudgetHandler {
-	return &BudgetHandler{}
+type BudgetAggregation struct {
+	YearMonth          string             `json:"year_month"`
+	TotalBudget        int64              `json:"total_budget"`
+	TotalSpent         int64              `json:"total_spent"`
+	RemainingBalance   int64              `json:"remaining_balance"`
+	SpendingByCategory []CategorySpending `json:"spending_by_category"`
+}
+
+type BudgetRepository interface {
+	GetAggregation(ctx context.Context, yearMonth string) (BudgetAggregation, error)
+	SetTotalBudget(ctx context.Context, yearMonth string, totalBudget int64) error
+}
+
+type BudgetHandler struct {
+	repository BudgetRepository
+}
+
+func NewBudgetHandler(repository BudgetRepository) *BudgetHandler {
+	return &BudgetHandler{repository: repository}
 }
 
 func (h *BudgetHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/v1/budgets", h.list)
-	mux.HandleFunc("POST /api/v1/budgets", h.create)
-	mux.HandleFunc("GET /api/v1/budgets/{id}", h.get)
-	mux.HandleFunc("PUT /api/v1/budgets/{id}", h.update)
-	mux.HandleFunc("DELETE /api/v1/budgets/{id}", h.delete)
-}
-
-func (h *BudgetHandler) list(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": []model.Budget{},
-	})
-}
-
-func (h *BudgetHandler) create(w http.ResponseWriter, r *http.Request) {
-	var input model.BudgetInput
-	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	budget := model.Budget{
-		ID:         "pending",
-		CategoryID: input.CategoryID,
-		Limit:      input.Limit,
-		Period:     input.Period,
-		CreatedAt:  time.Now().UTC(),
-	}
-
-	writeJSON(w, http.StatusCreated, envelope{
-		"data": budget,
-	})
+	mux.HandleFunc("GET /api/v1/budget/{year_month}", h.get)
+	mux.HandleFunc("PUT /api/v1/budget/{year_month}", h.update)
 }
 
 func (h *BudgetHandler) get(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
-}
-
-func (h *BudgetHandler) update(w http.ResponseWriter, r *http.Request) {
-	var input model.BudgetInput
-	if err := decodeJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+	yearMonth := r.PathValue("year_month")
+	if yearMonth == "" {
+		writeError(w, http.StatusBadRequest, "year_month is required", "VALIDATION_ERROR")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, envelope{
-		"data": envelope{
-			"id": r.PathValue("id"),
-		},
-	})
+	agg, err := h.repository.GetAggregation(r.Context(), yearMonth)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	if agg.SpendingByCategory == nil {
+		agg.SpendingByCategory = []CategorySpending{}
+	}
+	writeJSON(w, http.StatusOK, agg)
 }
 
-func (h *BudgetHandler) delete(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusNoContent, nil)
+func (h *BudgetHandler) update(w http.ResponseWriter, r *http.Request) {
+	yearMonth := r.PathValue("year_month")
+	if yearMonth == "" {
+		writeError(w, http.StatusBadRequest, "year_month is required", "VALIDATION_ERROR")
+		return
+	}
+
+	var input struct {
+		TotalBudget int64 `json:"total_budget"`
+	}
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error(), "VALIDATION_ERROR")
+		return
+	}
+
+	if err := h.repository.SetTotalBudget(r.Context(), yearMonth, input.TotalBudget); err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "budget updated successfully"})
 }

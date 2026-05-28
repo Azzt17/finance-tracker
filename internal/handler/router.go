@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Azzt17/finance-tracker/internal/middleware"
@@ -8,6 +9,7 @@ import (
 
 type Config struct {
 	StaticDir string
+	DB        *sql.DB
 }
 
 func NewRouter(config Config) http.Handler {
@@ -15,14 +17,17 @@ func NewRouter(config Config) http.Handler {
 
 	mux.HandleFunc("GET /healthz", healthCheck)
 
-	transactions := NewTransactionHandler()
-	transactions.RegisterRoutes(mux)
+	// transactions := NewTransactionHandler(repository.NewTransactionRepository(config.DB))
+	// transactions.RegisterRoutes(mux)
 
-	budgets := NewBudgetHandler()
-	budgets.RegisterRoutes(mux)
+	// budgets := NewBudgetHandler(repository.NewBudgetAllocationRepository(config.DB))
+	// budgets.RegisterRoutes(mux)
 
-	categories := NewCategoryHandler()
-	categories.RegisterRoutes(mux)
+	// categories := NewCategoryHandler(repository.NewCategoryRepository(config.DB))
+	// categories.RegisterRoutes(mux)
+
+	// savingsGoals := NewSavingsGoalHandler(repository.NewSavingsGoalRepository(config.DB))
+	// savingsGoals.RegisterRoutes(mux)
 
 	staticDir := config.StaticDir
 	if staticDir == "" {

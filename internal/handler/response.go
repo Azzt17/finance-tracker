@@ -22,12 +22,10 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
+func writeError(w http.ResponseWriter, status int, message string, code string) {
 	writeJSON(w, status, envelope{
-		"error": envelope{
-			"message": message,
-			"status":  status,
-		},
+		"error": message,
+		"code":  code,
 	})
 }
 
