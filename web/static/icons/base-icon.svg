@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <!-- Background -->
+    <rect width="512" height="512" fill="#11191f" rx="100"/>
+    <!-- Wallet Illustration -->
+    <g transform="translate(106, 126)">
+        <rect width="300" height="200" rx="20" fill="#017fc0"/>
+        <path d="M 0 60 Q 150 120 300 60 L 300 200 A 20 20 0 0 1 280 220 L 20 220 A 20 20 0 0 1 0 200 Z" fill="#016aa0"/>
+        <circle cx="150" cy="80" r="40" fill="#ffc107"/>
+        <circle cx="150" cy="80" r="30" fill="#ffb300"/>
+        <text x="150" y="92" font-family="sans-serif" font-size="40" font-weight="bold" fill="#11191f" text-anchor="middle">Rp</text>
+    </g>
+</svg>
