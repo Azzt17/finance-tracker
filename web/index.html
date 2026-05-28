@@ -1,210 +1,293 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <title>Finance Tracker</title>
-    
-    <!-- PWA Required Meta Tags -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#11191f">
+    <meta name="theme-color" content="#0f172a">
 
-    <!-- PWA Manifest & Icons -->
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
-    
-    <!-- Pico.css Locally Served -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <link rel="stylesheet" href="/static/css/pico.min.css">
     
-    <!-- Alpine.js Store & Core -->
     <script defer src="/static/js/app.js"></script>
     <script defer src="/static/js/alpine.min.js"></script>
-    
+
     <style>
-        /* Hide Alpine elements before initialization */
+        :root {
+            /* Muted Blue & Spacing Adjustments */
+            --pico-primary: #3b82f6;
+            --pico-primary-hover: #2563eb;
+            --pico-primary-background: #3b82f6;
+            --pico-spacing: 0.75rem;
+            --pico-form-element-spacing-vertical: 0.5rem;
+            --pico-form-element-spacing-horizontal: 0.75rem;
+            --pico-border-radius: 0.75rem;
+            --pico-background-color: #0f172a;
+        }
+
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--pico-background-color); color: #f8fafc; padding-bottom: 80px; padding-top: 1rem; }
+        
+        /* Typography */
+        h1 { font-size: 32px; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+        h2 { font-size: 24px; font-weight: 700; margin-bottom: 0.5rem; }
+        h3 { font-size: 20px; font-weight: 600; margin-bottom: 0.25rem; }
+        .text-muted { color: #94a3b8; font-size: 14px; }
+        .text-danger { color: #ef4444; }
+        .text-success { color: #10b981; }
+
+        /* Navigation Bottom Bar */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border-top: 1px solid #1e293b;
+            display: flex; justify-content: space-around; padding: 0.5rem 0;
+            z-index: 1000; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+        }
+        .bottom-nav button {
+            background: transparent !important; border: none !important; color: #64748b; font-size: 12px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 0.5rem; margin: 0; width: auto; box-shadow: none !important;
+        }
+        .bottom-nav button.active { color: var(--pico-primary); font-weight: bold; }
+        .bottom-nav svg { width: 24px; height: 24px; fill: currentColor; }
+
+        /* Giant Input Field */
+        .giant-input-container { margin: 2rem 0; display: flex; flex-direction: column; align-items: center; }
+        .giant-input {
+            font-size: 3rem !important; height: auto !important;
+            text-align: center; font-weight: 800; padding: 0.5rem 0 !important;
+            background: transparent !important; border: none !important;
+            border-bottom: 2px solid #334155 !important; border-radius: 0 !important;
+            color: #fff !important; width: 100%; outline: none !important;
+        }
+        .giant-input:focus { border-bottom-color: var(--pico-primary) !important; box-shadow: none !important; }
+
+        /* Quick Add Grid */
+        .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+        .quick-btn { padding: 0.5rem; border-radius: 0.75rem; text-align: center; background: #1e293b; border: 1px solid #334155; font-size: 14px; cursor: pointer;}
+        .quick-btn:active { background: #334155; }
+        
+        /* Sticky Save Button */
+        .sticky-save {
+            position: fixed; bottom: 85px; left: 1rem; right: 1rem; z-index: 99;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); font-size: 18px; font-weight: bold; padding: 1rem;
+        }
+
+        /* Toasts & Banners */
+        .toast {
+            position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9); border: 1px solid #334155;
+            color: #fff; padding: 0.5rem 1rem; border-radius: 2rem; z-index: 2000;
+            font-size: 14px; font-weight: 600; display: flex; gap: 0.5rem; align-items: center;
+        }
+        .toast.error { background: rgba(153, 27, 27, 0.9); border-color: #ef4444; }
+        
+        .sync-badge {
+            background: #f59e0b; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+
         [x-cloak] { display: none !important; }
         
-        /* Custom UI Enhancements */
-        .nav-links a { padding: 0.5rem 1rem; border-radius: 0.25rem; text-decoration: none; }
-        .nav-links a.active { background-color: var(--pico-primary); color: var(--pico-primary-inverse); }
-        .nav-links a:not(.active) { color: var(--pico-contrast); }
+        /* Cards Overrides */
+        article { padding: 1rem; margin-bottom: 0.75rem; border-radius: 1rem; border: 1px solid #1e293b; background: #1e293b; box-shadow: none; }
+        
+        /* History Row */
+        .history-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding: 0.75rem 0; }
+        .history-row:last-child { border-bottom: none; }
+        .btn-icon { background: transparent; border: none; padding: 4px; color: #94a3b8; }
+        .btn-icon:hover { color: #ef4444; }
     </style>
 </head>
 <body x-data>
-    <!-- Offline Status Banner -->
-    <div x-show="$store.finance.isOffline" 
-         x-transition
-         x-cloak
-         style="position: fixed; bottom: 0; left: 0; right: 0; background-color: #d9534f; color: white; text-align: center; padding: 0.5rem; font-size: 0.9em; z-index: 9999; font-weight: bold; box-shadow: 0 -2px 10px rgba(0,0,0,0.2);">
-        ⚠️ Sedang offline. Data tersimpan lokal.
-    </div>
-
+    
     <!-- Toast Feedback -->
-    <div x-show="$store.finance.feedback.show" 
-         x-transition 
-         x-cloak
-         style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; padding: 10px 20px; border-radius: 20px; color: white; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-         :style="`background-color: ${$store.finance.feedback.isError ? '#d9534f' : '#28a745'};`">
+    <div x-cloak x-show="$store.finance.feedback.show" 
+         class="toast" 
+         :class="$store.finance.feedback.isError ? 'error' : ''"
+         x-transition.opacity.duration.300ms>
         <span x-text="$store.finance.feedback.message"></span>
     </div>
 
     <main class="container">
-        <!-- Application Header -->
-        <header>
-            <nav>
-                <ul>
-                    <li><strong>Finance Tracker</strong></li>
-                </ul>
-                <ul>
-                    <li x-show="$store.finance.isOffline" x-cloak>
-                        <span style="color: #d9534f; font-size: 0.8em; font-weight: bold;">[Offline]</span>
-                    </li>
-                    <li x-show="$store.finance.pendingSync > 0" x-cloak>
-                        <span style="font-size: 0.8em;">Sync: <span x-text="$store.finance.pendingSync"></span></span>
-                    </li>
-                </ul>
-            </nav>
-            
-            <!-- Navigation -->
-            <nav style="border-bottom: 1px solid var(--pico-muted-border-color); margin-bottom: 2rem; padding-bottom: 1rem;">
-                <ul class="nav-links" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0; padding: 0;">
-                    <li><a href="#" @click.prevent="$store.finance.changeView('input')" :class="{ 'active': $store.finance.currentView === 'input' }">Input</a></li>
-                    <li><a href="#" @click.prevent="$store.finance.changeView('dashboard')" :class="{ 'active': $store.finance.currentView === 'dashboard' }">Dashboard</a></li>
-                    <li><a href="#" @click.prevent="$store.finance.changeView('history')" :class="{ 'active': $store.finance.currentView === 'history' }">History</a></li>
-                    <li><a href="#" @click.prevent="$store.finance.changeView('settings')" :class="{ 'active': $store.finance.currentView === 'settings' }">Settings</a></li>
-                </ul>
-            </nav>
+        
+        <!-- Header / Status -->
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+                <h2 style="margin: 0;">Finance</h2>
+                <span class="text-muted" x-show="!$store.finance.isOffline" style="color: #10b981; font-size: 12px;">● Online</span>
+                <span class="text-muted" x-show="$store.finance.isOffline" style="color: #ef4444; font-size: 12px;">● Offline</span>
+            </div>
+            <div>
+                <span x-show="$store.finance.pendingSync > 0" class="sync-badge">
+                    <svg style="width:12px;height:12px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                    <span x-text="$store.finance.pendingSync + ' Pending'"></span>
+                </span>
+            </div>
         </header>
 
-        <!-- Loading Indicator -->
-        <div x-show="$store.finance.isLoading" aria-busy="true" style="text-align: center; margin-top: 2rem;">
-            Memuat data...
+        <!-- VIEW: INPUT TRANSAKSI -->
+        <div x-show="$store.finance.currentView === 'input'" x-data="{ amount: '', note: '', categoryId: '' }">
+            <h1 style="text-align: center;">Catat<br>Pengeluaran</h1>
+            
+            <div class="giant-input-container">
+                <input type="number" x-model="amount" class="giant-input" placeholder="0" inputmode="numeric" autofocus>
+                <div class="text-muted">Nominal (Rp)</div>
+            </div>
+
+            <input type="text" x-model="note" placeholder="Catatan (Opsional)" style="margin-bottom: 1rem;">
+            
+            <select x-model="categoryId" style="margin-bottom: 1rem;">
+                <option value="">Pilih Kategori (Opsional)</option>
+                <template x-for="cat in $store.finance.categories" :key="cat.id">
+                    <option :value="cat.id" x-text="`${cat.icon_emoji || ''} ${cat.name}`"></option>
+                </template>
+            </select>
+
+            <div class="text-muted" style="margin-bottom: 0.5rem; font-weight: 600;">Quick Add (Opsional):</div>
+            <div class="quick-grid">
+                <template x-for="cat in $store.finance.quickAddCategories" :key="cat.id">
+                    <div class="quick-btn" @click="categoryId = cat.id; $store.finance.submitTransaction(amount, note, categoryId); amount=''; note=''; categoryId='';" x-text="`${cat.icon_emoji} ${cat.name}`"></div>
+                </template>
+            </div>
+
+            <button class="sticky-save" @click="$store.finance.submitTransaction(amount, note, categoryId); amount=''; note=''; categoryId='';" :disabled="!amount">
+                Simpan Transaksi
+            </button>
         </div>
 
-        <!-- Main Content Area -->
-        <div x-show="!$store.finance.isLoading" x-cloak>
+        <!-- VIEW: DASHBOARD -->
+        <div x-cloak x-show="$store.finance.currentView === 'dashboard'">
+            <h1>Dashboard</h1>
             
-            <!-- View: Input -->
-            <template x-if="$store.finance.currentView === 'input'">
-                <section x-data="{ amount: '', note: '' }">
-                    <h2>Input Transaksi</h2>
-                    <form @submit.prevent="$store.finance.submitTransaction(amount, note, null); amount=''; note=''">
-                        <label>
-                            Nominal (Rp)
-                            <input type="number" x-model="amount" required autofocus placeholder="Contoh: 50000">
-                        </label>
-                        <label>
-                            Catatan
-                            <input type="text" x-model="note" placeholder="Makan siang...">
-                        </label>
-                        <button type="submit" class="outline" :disabled="!amount">Simpan Tanpa Kategori</button>
-                    </form>
-                    
-                    <hr>
-                    
-                    <h4>Quick Add (Pilih Kategori)</h4>
-                    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
-                        <template x-for="cat in $store.finance.quickAddCategories" :key="cat.id">
-                            <button class="secondary outline" 
-                                    style="display: flex; flex-direction: column; align-items: center; padding: 0.5rem; cursor: pointer; border-radius: 0.5rem;"
-                                    @click="$store.finance.submitTransaction(amount, note, cat.id); amount=''; note=''"
-                                    :disabled="!amount">
-                                <span x-text="cat.icon_emoji" style="font-size: 2rem; display: block; margin-bottom: 0.25rem;"></span>
-                                <span x-text="cat.name" style="font-size: 0.8em; font-weight: bold;"></span>
+            <article style="text-align: center; padding: 2rem 1rem;">
+                <div class="text-muted">Sisa Anggaran</div>
+                <div style="font-size: 2.5rem; font-weight: 800;" :class="$store.finance.budget.remaining_balance < 0 ? 'text-danger' : ''" x-text="'Rp ' + $store.finance.budget.remaining_balance.toLocaleString('id-ID')"></div>
+                <div class="text-muted" style="margin-top: 0.5rem;" x-text="'Dari total Rp ' + $store.finance.budget.total_budget.toLocaleString('id-ID')"></div>
+            </article>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+                <h3 style="margin:0;">Target Tabungan</h3>
+            </div>
+            
+            <template x-if="$store.finance.savingsGoals.length === 0">
+                <div class="text-muted" style="text-align: center; padding: 1rem; border: 1px dashed #334155; border-radius: 0.5rem;">Belum ada target tabungan bulan ini.</div>
+            </template>
+
+            <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
+                <article>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <strong x-text="goal.name"></strong>
+                        <span x-text="'Rp ' + goal.current_saved.toLocaleString('id-ID') + ' / ' + goal.target_amount.toLocaleString('id-ID')"></span>
+                    </div>
+                    <progress :value="goal.current_saved" :max="goal.target_amount" style="margin: 0;"></progress>
+                </article>
+            </template>
+        </div>
+
+        <!-- VIEW: HISTORY -->
+        <div x-cloak x-show="$store.finance.currentView === 'history'">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>Riwayat</h1>
+                <button class="outline" style="width: auto; padding: 0.25rem 0.75rem; font-size: 12px;" @click="$store.finance.exportMarkdown()">⬇️ Export</button>
+            </div>
+
+            <template x-if="$store.finance.recentTransactions.length === 0">
+                <div class="text-muted" style="text-align: center; padding: 2rem;">Belum ada transaksi.</div>
+            </template>
+
+            <article style="padding: 0 1rem;">
+                <template x-for="tx in $store.finance.recentTransactions" :key="tx.client_transaction_id">
+                    <div class="history-row">
+                        <div>
+                            <div style="font-weight: 600;" x-text="$store.finance.getCategoryName(tx.category_id)"></div>
+                            <div class="text-muted" style="font-size: 12px;">
+                                <span x-text="new Date(tx.transacted_at).toLocaleDateString('id-ID', {day:'numeric', month:'short'})"></span>
+                                <span x-show="tx.note" x-text="' • ' + tx.note"></span>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <strong style="color: #ef4444;" x-text="'-Rp ' + tx.amount.toLocaleString('id-ID')"></strong>
+                            <button class="btn-icon" @click="$store.finance.deleteTransaction(tx.client_transaction_id, tx.id)" title="Hapus">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
-                        </template>
-                        <div x-show="$store.finance.quickAddCategories.length === 0" style="grid-column: 1 / -1;">
-                            <p>Tidak ada kategori Quick Add. Silakan tambah data di database/settings.</p>
                         </div>
                     </div>
-                </section>
-            </template>
+                </template>
+            </article>
+        </div>
+
+        <!-- VIEW: SETTINGS -->
+        <div x-cloak x-show="$store.finance.currentView === 'settings'">
+            <h1>Pengaturan</h1>
             
-            <!-- View: Dashboard -->
-            <template x-if="$store.finance.currentView === 'dashboard'">
-                <section>
-                    <h2>Dashboard (<span x-text="$store.finance.currentMonth"></span>)</h2>
-                    
-                    <article>
-                        <header><strong>Sisa Saldo</strong></header>
-                        <h1 style="margin: 0; color: var(--pico-primary);">Rp <span x-text="($store.finance.budget.remaining_balance || 0).toLocaleString('id-ID')"></span></h1>
-                        <p style="margin-bottom: 0;">Dari anggaran Rp <span x-text="($store.finance.budget.total_budget || 0).toLocaleString('id-ID')"></span></p>
-                    </article>
+            <article x-data="{ bgAmt: '' }">
+                <h3>Anggaran Bulanan</h3>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="number" x-model="bgAmt" placeholder="Cth: 5000000" style="margin:0;">
+                    <button style="width: auto; margin:0;" @click="$store.finance.setBudget(bgAmt); bgAmt='';">Set</button>
+                </div>
+            </article>
 
-                    <h4>Progress Tabungan</h4>
-                    <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
-                        <article style="margin-bottom: 1rem; padding: 1rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <strong x-text="goal.name"></strong>
-                                <span>Rp <span x-text="goal.current_saved.toLocaleString('id-ID')"></span> / Rp <span x-text="goal.target_amount.toLocaleString('id-ID')"></span></span>
-                            </div>
-                            <progress :value="goal.current_saved" :max="goal.target_amount"></progress>
-                        </article>
+            <article x-data="{ catName: '', catIcon: '', isQuick: false }">
+                <h3>Kelola Kategori</h3>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" x-model="catIcon" placeholder="Emoji" style="width: 80px; margin:0;">
+                    <input type="text" x-model="catName" placeholder="Nama Kategori" style="margin:0;">
+                </div>
+                <label style="margin-bottom: 0.5rem;"><input type="checkbox" x-model="isQuick"> Tampilkan di Quick Add</label>
+                <button class="secondary" style="margin-bottom: 1rem;" @click="$store.finance.addCategory(catName, catIcon, isQuick); catName=''; catIcon=''; isQuick=false;">+ Tambah Kategori</button>
+                
+                <div style="border-top: 1px solid #334155; padding-top: 0.5rem;">
+                    <template x-for="cat in $store.finance.categories" :key="cat.id">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                            <span x-text="`${cat.icon_emoji} ${cat.name}`"></span>
+                            <button class="btn-icon" @click="$store.finance.deleteCategory(cat.id)">🗑️</button>
+                        </div>
                     </template>
-                    <div x-show="$store.finance.savingsGoals.length === 0">
-                        <p>Belum ada target tabungan bulan ini.</p>
-                    </div>
-                </section>
-            </template>
+                </div>
+            </article>
 
-            <!-- View: History -->
-            <template x-if="$store.finance.currentView === 'history'">
-                <section>
-                    <h2>Riwayat Transaksi</h2>
-                    <div class="overflow-auto">
-                        <table class="striped">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Kategori</th>
-                                    <th>Catatan</th>
-                                    <th style="text-align: right;">Nominal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="tx in $store.finance.recentTransactions" :key="tx.id">
-                                    <tr>
-                                        <td x-text="new Date(tx.transacted_at).toLocaleDateString('id-ID', {day: '2-digit', month: 'short'})"></td>
-                                        <td x-text="$store.finance.getCategoryName(tx.category_id)"></td>
-                                        <td x-text="tx.note || '-'"></td>
-                                        <td style="text-align: right;">Rp <span x-text="tx.amount.toLocaleString('id-ID')"></span></td>
-                                    </tr>
-                                </template>
-                                <tr x-show="$store.finance.recentTransactions.length === 0">
-                                    <td colspan="4" style="text-align: center;">Tidak ada transaksi bulan ini.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </template>
+            <article x-data="{ savName: '', savTarget: '' }">
+                <h3>Target Tabungan</h3>
+                <input type="text" x-model="savName" placeholder="Nama Target (Cth: Beli HP)" style="margin-bottom: 0.5rem;">
+                <input type="number" x-model="savTarget" placeholder="Nominal Target" style="margin-bottom: 0.5rem;">
+                <button class="secondary" style="margin-bottom: 1rem;" @click="$store.finance.addSavings(savName, savTarget); savName=''; savTarget='';">+ Tambah Target</button>
 
-            <!-- View: Settings -->
-            <template x-if="$store.finance.currentView === 'settings'">
-                <section x-data="{ newBudget: $store.finance.budget.total_budget || 0 }">
-                    <h2>Pengaturan</h2>
-                    
-                    <article>
-                        <header><strong>Set Anggaran Bulanan</strong></header>
-                        <form @submit.prevent="$store.finance.setBudget(newBudget)">
-                            <label>
-                                Total Anggaran
-                                <input type="number" x-model="newBudget" required>
-                            </label>
-                            <button type="submit">Simpan Anggaran</button>
-                        </form>
-                    </article>
-
-                    <article>
-                        <header><strong>Export Data</strong></header>
-                        <p>Unduh laporan bulanan dalam format Markdown (ringkasan anggaran & transaksi).</p>
-                        <button class="secondary" @click="$store.finance.exportMarkdown()">Download Laporan (.md)</button>
-                    </article>
-                </section>
-            </template>
+                <div style="border-top: 1px solid #334155; padding-top: 0.5rem;">
+                    <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                            <span x-text="`${goal.name} (Rp ${goal.target_amount.toLocaleString()})`"></span>
+                            <button class="btn-icon" @click="$store.finance.deleteSavings(goal.id)">🗑️</button>
+                        </div>
+                    </template>
+                </div>
+            </article>
 
         </div>
     </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button :class="$store.finance.currentView === 'input' ? 'active' : ''" @click="$store.finance.changeView('input')">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Input
+        </button>
+        <button :class="$store.finance.currentView === 'dashboard' ? 'active' : ''" @click="$store.finance.changeView('dashboard')">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Dash
+        </button>
+        <button :class="$store.finance.currentView === 'history' ? 'active' : ''" @click="$store.finance.changeView('history')">
+            <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+            Riwayat
+        </button>
+        <button :class="$store.finance.currentView === 'settings' ? 'active' : ''" @click="$store.finance.changeView('settings')">
+            <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+            Settings
+        </button>
+    </nav>
 </body>
 </html>
