@@ -90,7 +90,6 @@ func (h *TransactionHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	transaction, err := h.repository.Create(r.Context(), input)
 	if err != nil {
 		writeRepositoryError(w, err)
