@@ -23,7 +23,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func TestCategoryRepository_CreateAndList(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := repository.NewCategoryRepository(db)
 	ctx := context.Background()

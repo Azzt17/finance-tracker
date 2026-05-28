@@ -21,7 +21,7 @@ func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.Tr
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var synced []model.Transaction
 

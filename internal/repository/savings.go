@@ -25,7 +25,7 @@ func (r *SavingsRepository) List(ctx context.Context, yearMonth string) ([]model
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var goals []model.SavingsGoal
 	for rows.Next() {

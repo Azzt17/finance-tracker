@@ -33,7 +33,7 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 	if err != nil {
 		return model.BudgetAggregation{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var totalSpent int64
 	var spendingByCategory []model.CategorySpending
