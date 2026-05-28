@@ -39,6 +39,10 @@ func (m *mockCategoryRepo) Update(ctx context.Context, id int64, input model.Cat
 	return model.Category{}, nil
 }
 
+func (m *mockCategoryRepo) Delete(ctx context.Context, id int64) error {
+	return nil
+}
+
 func TestCategoryHandler_ListCategories(t *testing.T) {
 	repo := &mockCategoryRepo{
 		categories: []model.Category{
