@@ -343,6 +343,39 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async reduceSavingsProgress(goal, amountStr) {
+            const amount = parseInt(amountStr, 10);
+            if(isNaN(amount) || amount <= 0) return;
+            if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
+            
+            if (amount > goal.current_saved) {
+                return this.showFeedback("❌ Nominal melebihi saldo", true);
+            }
+            
+            const payload = {
+                name: goal.name,
+                target_amount: goal.target_amount,
+                current_saved: goal.current_saved - amount,
+                year_month: goal.year_month,
+                is_achieved: false
+            };
+            
+            const res = await fetch(`/api/v1/savings/${goal.id}`, { 
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload) 
+            });
+            if(res.ok) { 
+                // Catat nominal negatif agar mengembalikan budget (Pemasukan)
+                await this.submitTransaction(-amount, `Tarik Tabungan: ${goal.name}`, null);
+                
+                this.showFeedback("✓ Tabungan ditarik"); 
+                this.loadInitialData(); 
+            } else {
+                this.showFeedback("❌ Gagal menarik tabungan", true);
+            }
+        },
+
         showFeedback(msg, isError = false) {
             this.feedback.message = msg;
             this.feedback.isError = isError;

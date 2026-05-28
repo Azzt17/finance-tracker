@@ -186,7 +186,10 @@
                         <strong x-text="goal.name"></strong>
                         <div style="display: flex; align-items: center;">
                             <span x-text="'Rp ' + goal.current_saved.toLocaleString('id-ID') + ' / ' + goal.target_amount.toLocaleString('id-ID')" style="font-size: 14px;"></span>
-                            <button class="btn-icon" style="margin-left: 8px; color: var(--pico-primary);" @click="let amt = prompt('Masukkan nominal yang ditabung:'); if(amt) $store.finance.addSavingsProgress(goal, amt);" title="Tambah Tabungan">
+                            <button class="btn-icon" style="margin-left: 8px; color: #ef4444;" @click="let amt = prompt('Masukkan nominal yang ditarik:'); if(amt) $store.finance.reduceSavingsProgress(goal, amt);" title="Tarik Tabungan">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                            <button class="btn-icon" style="color: var(--pico-primary);" @click="let amt = prompt('Masukkan nominal yang ditabung:'); if(amt) $store.finance.addSavingsProgress(goal, amt);" title="Tambah Tabungan">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             </button>
                         </div>
@@ -218,7 +221,8 @@
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <strong style="color: #ef4444;" x-text="'-Rp ' + tx.amount.toLocaleString('id-ID')"></strong>
+                            <strong :style="tx.amount < 0 ? 'color: #10b981;' : 'color: #ef4444;'" 
+                                    x-text="(tx.amount < 0 ? '+Rp ' : '-Rp ') + Math.abs(tx.amount).toLocaleString('id-ID')"></strong>
                             <button class="btn-icon" @click="$store.finance.deleteTransaction(tx.client_transaction_id, tx.id)" title="Hapus">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
