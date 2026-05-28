@@ -18,11 +18,11 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 
 	yearMonth := time.Now().Format("2006-01")
 	input := model.SavingsGoalInput{
-		Name:          "Test Savings",
-		TargetAmount:  1000000,
-		CurrentSaved:  200000,
-		YearMonth:     yearMonth,
-		IsAchieved:    false,
+		Name:         "Test Savings",
+		TargetAmount: 1000000,
+		CurrentSaved: 200000,
+		YearMonth:    yearMonth,
+		IsAchieved:   false,
 	}
 
 	// Create

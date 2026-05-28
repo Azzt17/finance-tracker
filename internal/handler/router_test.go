@@ -15,7 +15,7 @@ func TestNewRouter(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("hello")},
 	}
-	
+
 	// Create a mock db
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
