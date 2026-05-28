@@ -14,7 +14,11 @@ func TestMigrateCreatesInitialSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	defer db.Close()
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("close database: %v", err)
+		}
+	})
 
 	if err := Migrate(ctx, db); err != nil {
 		t.Fatalf("migrate database: %v", err)
