@@ -87,10 +87,7 @@ func (h *TransactionHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "amount is required", "VALIDATION_ERROR")
 		return
 	}
-	if input.CategoryID == nil {
-		writeError(w, http.StatusBadRequest, "category_id is required", "VALIDATION_ERROR")
-		return
-	}
+
 
 	transaction, err := h.repository.Create(r.Context(), input)
 	if err != nil {
