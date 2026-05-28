@@ -153,6 +153,9 @@
                     <div class="quick-btn" @click="categoryId = cat.id; $store.finance.submitTransaction(amount, note, categoryId); amount=''; note=''; categoryId='';" x-text="`${cat.icon_emoji} ${cat.name}`"></div>
                 </template>
             </div>
+            
+            <!-- Spacer to prevent sticky save button from overlapping content -->
+            <div style="height: 100px;"></div>
 
             <button class="sticky-save" @click="$store.finance.submitTransaction(amount, note, categoryId); amount=''; note=''; categoryId='';" :disabled="!amount">
                 Simpan Transaksi

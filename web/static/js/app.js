@@ -114,12 +114,19 @@ document.addEventListener('alpine:init', () => {
             const queue = await this.getSyncQueue();
             if (queue.length === 0) return;
 
+            // Sanitize types to prevent 400 Bad Request for stuck string types
+            const sanitizedQueue = queue.map(tx => ({
+                ...tx,
+                amount: parseInt(tx.amount, 10),
+                category_id: tx.category_id ? parseInt(tx.category_id, 10) : null
+            }));
+
             try {
                 this.showFeedback("Mulai sinkronisasi...", false);
                 const res = await fetch('/api/v1/sync/transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ transactions: queue })
+                    body: JSON.stringify({ transactions: sanitizedQueue })
                 });
 
                 if (res.ok) {
@@ -128,7 +135,16 @@ document.addEventListener('alpine:init', () => {
                     await this.loadInitialData();
                     this.showFeedback(`✓ Sinkronisasi selesai`, false);
                 } else {
-                    this.showFeedback("❌ Gagal sinkronisasi", true);
+                    // Jika error 400 (Bad Request), artinya ada data yg tidak valid permanen.
+                    // Sebaiknya kita hapus dari queue agar tidak nyangkut selamanya.
+                    if (res.status === 400) {
+                        await this.clearSyncQueue();
+                        this.pendingSync = 0;
+                        await this.loadInitialData();
+                        this.showFeedback("Data rusak dihapus dari antrean", true);
+                    } else {
+                        this.showFeedback("❌ Gagal sinkronisasi", true);
+                    }
                 }
             } catch (err) {
                 console.error("Sinkronisasi tertunda", err);
@@ -189,7 +205,7 @@ document.addEventListener('alpine:init', () => {
             const payload = {
                 client_transaction_id: crypto.randomUUID(),
                 amount: parseInt(amount, 10),
-                category_id: categoryId || null,
+                category_id: categoryId ? parseInt(categoryId, 10) : null,
                 note: note || '',
                 transacted_at: new Date().toISOString()
             };
