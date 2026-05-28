@@ -13,10 +13,9 @@ func Seed(ctx context.Context, db *sql.DB) error {
 		IsQuickAdd int
 		SortOrder  int
 	}{
-		{"Nasi Kuning", "🍛", 1, 1},
-		{"Nasi Padang", "🍛", 1, 2},
-		{"Minuman Manis", "🧋", 1, 3},
-		{"Ongkos", "🚌", 1, 4},
+		{"Makan", "🍛", 1, 1},
+		{"Transportasi", "🚌", 1, 2},
+		{"Entertainment", "🎮", 1, 3},
 	}
 
 	for _, c := range categories {
