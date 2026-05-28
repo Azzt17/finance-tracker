@@ -25,6 +25,8 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         isOffline: !navigator.onLine,
         pendingSync: 0,
+        
+        feedback: { show: false, message: '', isError: false },
 
         // ==========================================
         // GETTERS / COMPUTED
@@ -103,7 +105,7 @@ document.addEventListener('alpine:init', () => {
             if (this.isOffline) {
                 // To be implemented: store in IndexedDB and sync later
                 this.pendingSync++;
-                alert("Anda sedang offline. Transaksi ditambahkan ke antrean sinkronisasi.");
+                this.showFeedback("Ditambahkan ke antrean offline", false);
                 return;
             }
 
@@ -116,15 +118,24 @@ document.addEventListener('alpine:init', () => {
                 
                 if (res.ok) {
                     await this.loadInitialData(); // Refresh data
-                    this.changeView('dashboard'); // Redirect to dashboard
+                    this.showFeedback("✓ Tercatat", false);
                 } else {
                     const err = await res.json();
-                    alert("Gagal menyimpan transaksi: " + err.error);
+                    this.showFeedback("Gagal: " + err.error, true);
                 }
             } catch (err) {
                 console.error('Submit transaction error:', err);
-                alert("Kesalahan jaringan. Pastikan server berjalan.");
+                this.showFeedback("Kesalahan jaringan", true);
             }
+        },
+
+        showFeedback(msg, isError = false) {
+            this.feedback.message = msg;
+            this.feedback.isError = isError;
+            this.feedback.show = true;
+            setTimeout(() => {
+                this.feedback.show = false;
+            }, 2500);
         },
 
         async setBudget(amount) {
