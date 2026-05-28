@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    
+    <!-- Pico.css Locally Served -->
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    
+    <!-- Alpine.js Store & Core -->
+    <script defer src="/static/js/app.js"></script>
+    <script defer src="/static/js/alpine.min.js"></script>
+    
+    <style>
+        /* Hide Alpine elements before initialization */
+        [x-cloak] { display: none !important; }
+        
+        /* Custom UI Enhancements */
+        .nav-links a { padding: 0.5rem 1rem; border-radius: 0.25rem; text-decoration: none; }
+        .nav-links a.active { background-color: var(--pico-primary); color: var(--pico-primary-inverse); }
+        .nav-links a:not(.active) { color: var(--pico-contrast); }
+    </style>
+</head>
+<body x-data>
+    <main class="container">
+        <!-- Application Header -->
+        <header>
+            <nav>
+                <ul>
+                    <li><strong>Finance Tracker</strong></li>
+                </ul>
+                <ul>
+                    <li x-show="$store.finance.isOffline" x-cloak>
+                        <span style="color: #d9534f; font-size: 0.8em; font-weight: bold;">[Offline]</span>
+                    </li>
+                    <li x-show="$store.finance.pendingSync > 0" x-cloak>
+                        <span style="font-size: 0.8em;">Sync: <span x-text="$store.finance.pendingSync"></span></span>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Navigation -->
+            <nav style="border-bottom: 1px solid var(--pico-muted-border-color); margin-bottom: 2rem; padding-bottom: 1rem;">
+                <ul class="nav-links" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0; padding: 0;">
+                    <li><a href="#" @click.prevent="$store.finance.changeView('input')" :class="{ 'active': $store.finance.currentView === 'input' }">Input</a></li>
+                    <li><a href="#" @click.prevent="$store.finance.changeView('dashboard')" :class="{ 'active': $store.finance.currentView === 'dashboard' }">Dashboard</a></li>
+                    <li><a href="#" @click.prevent="$store.finance.changeView('history')" :class="{ 'active': $store.finance.currentView === 'history' }">History</a></li>
+                    <li><a href="#" @click.prevent="$store.finance.changeView('settings')" :class="{ 'active': $store.finance.currentView === 'settings' }">Settings</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Loading Indicator -->
+        <div x-show="$store.finance.isLoading" aria-busy="true" style="text-align: center; margin-top: 2rem;">
+            Memuat data...
+        </div>
+
+        <!-- Main Content Area -->
+        <div x-show="!$store.finance.isLoading" x-cloak>
+            
+            <!-- View: Input -->
+            <template x-if="$store.finance.currentView === 'input'">
+                <section x-data="{ amount: '', note: '' }">
+                    <h2>Input Transaksi</h2>
+                    <form @submit.prevent="$store.finance.submitTransaction(amount, note, null); amount=''; note=''">
+                        <label>
+                            Nominal (Rp)
+                            <input type="number" x-model="amount" required autofocus placeholder="Contoh: 50000">
+                        </label>
+                        <label>
+                            Catatan
+                            <input type="text" x-model="note" placeholder="Makan siang...">
+                        </label>
+                        <button type="submit" class="outline" :disabled="!amount">Simpan Tanpa Kategori</button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <h4>Quick Add (Pilih Kategori)</h4>
+                    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
+                        <template x-for="cat in $store.finance.quickAddCategories" :key="cat.id">
+                            <button class="secondary outline" 
+                                    style="display: flex; flex-direction: column; align-items: center; padding: 1rem; cursor: pointer;"
+                                    @click="$store.finance.submitTransaction(amount, note, cat.id); amount=''; note=''"
+                                    :disabled="!amount">
+                                <span x-text="cat.icon_emoji" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></span>
+                                <span x-text="cat.name" style="font-size: 0.9em; font-weight: bold;"></span>
+                            </button>
+                        </template>
+                        <div x-show="$store.finance.quickAddCategories.length === 0" style="grid-column: 1 / -1;">
+                            <p>Tidak ada kategori Quick Add. Silakan tambah data di database/settings.</p>
+                        </div>
+                    </div>
+                </section>
+            </template>
+            
+            <!-- View: Dashboard -->
+            <template x-if="$store.finance.currentView === 'dashboard'">
+                <section>
+                    <h2>Dashboard (<span x-text="$store.finance.currentMonth"></span>)</h2>
+                    
+                    <article>
+                        <header><strong>Sisa Saldo</strong></header>
+                        <h1 style="margin: 0; color: var(--pico-primary);">Rp <span x-text="($store.finance.budget.remaining_balance || 0).toLocaleString('id-ID')"></span></h1>
+                        <p style="margin-bottom: 0;">Dari anggaran Rp <span x-text="($store.finance.budget.total_budget || 0).toLocaleString('id-ID')"></span></p>
+                    </article>
+
+                    <h4>Progress Tabungan</h4>
+                    <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
+                        <article style="margin-bottom: 1rem; padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <strong x-text="goal.name"></strong>
+                                <span>Rp <span x-text="goal.current_saved.toLocaleString('id-ID')"></span> / Rp <span x-text="goal.target_amount.toLocaleString('id-ID')"></span></span>
+                            </div>
+                            <progress :value="goal.current_saved" :max="goal.target_amount"></progress>
+                        </article>
+                    </template>
+                    <div x-show="$store.finance.savingsGoals.length === 0">
+                        <p>Belum ada target tabungan bulan ini.</p>
+                    </div>
+                </section>
+            </template>
+
+            <!-- View: History -->
+            <template x-if="$store.finance.currentView === 'history'">
+                <section>
+                    <h2>Riwayat Transaksi</h2>
+                    <div class="overflow-auto">
+                        <table class="striped">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Catatan</th>
+                                    <th style="text-align: right;">Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="tx in $store.finance.recentTransactions" :key="tx.id">
+                                    <tr>
+                                        <td x-text="new Date(tx.transacted_at).toLocaleDateString('id-ID', {day: '2-digit', month: 'short'})"></td>
+                                        <td x-text="$store.finance.getCategoryName(tx.category_id)"></td>
+                                        <td x-text="tx.note || '-'"></td>
+                                        <td style="text-align: right;">Rp <span x-text="tx.amount.toLocaleString('id-ID')"></span></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="$store.finance.recentTransactions.length === 0">
+                                    <td colspan="4" style="text-align: center;">Tidak ada transaksi bulan ini.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </template>
+
+            <!-- View: Settings -->
+            <template x-if="$store.finance.currentView === 'settings'">
+                <section x-data="{ newBudget: $store.finance.budget.total_budget || 0 }">
+                    <h2>Pengaturan</h2>
+                    
+                    <article>
+                        <header><strong>Set Anggaran Bulanan</strong></header>
+                        <form @submit.prevent="$store.finance.setBudget(newBudget)">
+                            <label>
+                                Total Anggaran
+                                <input type="number" x-model="newBudget" required>
+                            </label>
+                            <button type="submit">Simpan Anggaran</button>
+                        </form>
+                    </article>
+
+                    <article>
+                        <header><strong>Export Data</strong></header>
+                        <p>Unduh laporan bulanan dalam format Markdown (ringkasan anggaran & transaksi).</p>
+                        <button class="secondary" @click="$store.finance.exportMarkdown()">Download Laporan (.md)</button>
+                    </article>
+                </section>
+            </template>
+
+        </div>
+    </main>
+</body>
+</html>
