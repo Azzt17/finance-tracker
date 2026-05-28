@@ -46,15 +46,15 @@ func (h *ExportHandler) exportMarkdown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("# Laporan Keuangan: %s\n\n", yearMonth))
+	fmt.Fprintf(&buf, "# Laporan Keuangan: %s\n\n", yearMonth)
 	buf.WriteString("## Ringkasan Anggaran\n")
-	buf.WriteString(fmt.Sprintf("- **Total Anggaran:** Rp %d\n", agg.TotalBudget))
-	buf.WriteString(fmt.Sprintf("- **Total Pengeluaran:** Rp %d\n", agg.TotalSpent))
-	buf.WriteString(fmt.Sprintf("- **Sisa Saldo:** Rp %d\n\n", agg.RemainingBalance))
+	fmt.Fprintf(&buf, "- **Total Anggaran:** Rp %d\n", agg.TotalBudget)
+	fmt.Fprintf(&buf, "- **Total Pengeluaran:** Rp %d\n", agg.TotalSpent)
+	fmt.Fprintf(&buf, "- **Sisa Saldo:** Rp %d\n\n", agg.RemainingBalance)
 
 	buf.WriteString("## Pengeluaran Berdasarkan Kategori\n")
 	for _, cat := range agg.SpendingByCategory {
-		buf.WriteString(fmt.Sprintf("- **%s**: Rp %d\n", cat.CategoryName, cat.Total))
+		fmt.Fprintf(&buf, "- **%s**: Rp %d\n", cat.CategoryName, cat.Total)
 	}
 	buf.WriteString("\n")
 
@@ -65,11 +65,11 @@ func (h *ExportHandler) exportMarkdown(w http.ResponseWriter, r *http.Request) {
 		if note == "" {
 			note = "Tidak ada catatan"
 		}
-		buf.WriteString(fmt.Sprintf("- %s: Rp %d (%s)\n", dateStr, t.Amount, note))
+		fmt.Fprintf(&buf, "- %s: Rp %d (%s)\n", dateStr, t.Amount, note)
 	}
 
 	w.Header().Set("Content-Type", "text/markdown")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"export-%s.md\"", yearMonth))
 	w.WriteHeader(http.StatusOK)
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
