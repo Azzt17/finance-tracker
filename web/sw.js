@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finance-cache-v1';
+const CACHE_NAME = 'finance-cache-v2'; // Ubah angka versi ini setiap kali ada pembaruan kode/UI
 
 // Daftar semua aset statis yang perlu di-cache saat proses instalasi PWA
 const PRECACHE_ASSETS = [

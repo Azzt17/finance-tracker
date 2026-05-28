@@ -2,7 +2,35 @@
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('ServiceWorker registered with scope:', reg.scope))
+            .then(reg => {
+                console.log('ServiceWorker registered with scope:', reg.scope);
+                
+                // Deteksi jika ada versi Service Worker baru (Deploy Versi Baru)
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    if (installingWorker == null) return;
+                    
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Versi baru ditemukan dan sudah diinstal
+                            console.log('New version available! Updating...');
+                            
+                            // Akses store Alpine untuk memunculkan Toast
+                            const financeStore = document.querySelector('[x-data]')?._x_dataStack?.[0]?.$store?.finance;
+                            if (financeStore) {
+                                financeStore.showFeedback("✨ Versi baru diunduh. Memuat ulang...", false);
+                            }
+                            
+                            // Karena sw.js kita menggunakan self.skipWaiting(),
+                            // worker baru akan langsung aktif. Kita hanya perlu me-refresh halaman 
+                            // agar client memakai cache/aset baru.
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        }
+                    };
+                };
+            })
             .catch(err => console.error('ServiceWorker registration failed:', err));
     });
 }
