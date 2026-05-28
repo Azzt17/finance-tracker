@@ -2,3 +2,4 @@
 *.env
 finance-tracker
 .antigravitycli/
+server.log\ntmp-server
