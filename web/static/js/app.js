@@ -42,8 +42,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         async init() {
-            window.addEventListener('online', () => this.updateOfflineStatus(false));
-            window.addEventListener('offline', () => this.updateOfflineStatus(true));
+            // Gunakan Alpine.store eksplisit untuk memastikan reaktivitas
+            window.addEventListener('online', () => Alpine.store('finance').updateOfflineStatus(false));
+            window.addEventListener('offline', () => Alpine.store('finance').updateOfflineStatus(true));
+            
+            // Fallback interval jika event tidak terpicu
+            setInterval(() => {
+                const currentStatus = !navigator.onLine;
+                if (Alpine.store('finance').isOffline !== currentStatus) {
+                    Alpine.store('finance').updateOfflineStatus(currentStatus);
+                }
+            }, 2000);
+
             await this.initDB();
             this.loadInitialData();
             
