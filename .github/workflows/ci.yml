@@ -238,14 +238,14 @@ jobs:
       - name: Build application binary
         run: |
           mkdir -p dist
-          if [ -d "./cmd/${BINARY_NAME}" ]; then
+          if [ -d "./cmd/server" ]; then
             go build \
               -trimpath \
               -ldflags="-s -w -X main.version=${GITHUB_SHA}" \
               -o "dist/${BINARY_NAME}" \
-              "./cmd/${BINARY_NAME}"
+              "./cmd/server"
           else
-            echo "No ./cmd/${BINARY_NAME} package found; binary artifact skipped."
+            echo "No ./cmd/server package found; binary artifact skipped."
           fi
 
       - name: Upload binary artifact
