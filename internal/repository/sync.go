@@ -35,6 +35,16 @@ func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.Tr
 			return nil, err
 		}
 
+		if input.IsDeleted != nil && *input.IsDeleted {
+			if exists {
+				_, err = tx.ExecContext(ctx, "DELETE FROM transactions WHERE id = ?", id)
+				if err != nil {
+					slog.Error("sync delete failed", "error", err)
+				}
+			}
+			continue
+		}
+
 		if exists {
 			_, err = tx.ExecContext(ctx, `
 				UPDATE transactions

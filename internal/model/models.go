@@ -20,6 +20,7 @@ type TransactionInput struct {
 	Note                string    `json:"note,omitempty"`
 	TransactedAt        time.Time `json:"transacted_at"`
 	IsSynced            *bool     `json:"is_synced,omitempty"`
+	IsDeleted           *bool     `json:"is_deleted,omitempty"`
 }
 
 type BudgetAllocation struct {

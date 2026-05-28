@@ -11,6 +11,7 @@ type CategoryRepository interface {
 	List(ctx context.Context) ([]model.Category, error)
 	Create(ctx context.Context, input model.CategoryInput) (model.Category, error)
 	Update(ctx context.Context, id int64, input model.CategoryInput) (model.Category, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 type CategoryHandler struct {
@@ -25,6 +26,7 @@ func (h *CategoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/categories", h.list)
 	mux.HandleFunc("POST /api/v1/categories", h.create)
 	mux.HandleFunc("PATCH /api/v1/categories/{id}", h.update)
+	mux.HandleFunc("DELETE /api/v1/categories/{id}", h.delete)
 }
 
 func (h *CategoryHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -81,4 +83,18 @@ func (h *CategoryHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, category)
+}
+
+func (h *CategoryHandler) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category id", "VALIDATION_ERROR")
+		return
+	}
+	if err := h.repository.Delete(r.Context(), id); err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "deleted successfully"})
 }

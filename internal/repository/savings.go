@@ -88,3 +88,20 @@ func (r *SavingsRepository) Update(ctx context.Context, id int64, input model.Sa
 		IsAchieved:   input.IsAchieved,
 	}, nil
 }
+
+func (r *SavingsRepository) Delete(ctx context.Context, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM savings_goals WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}

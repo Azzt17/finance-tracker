@@ -12,6 +12,7 @@ type TransactionRepository interface {
 	List(ctx context.Context, yearMonth string, categoryID *int64, limit, offset int) ([]model.Transaction, error)
 	Create(ctx context.Context, input model.TransactionInput) (model.Transaction, error)
 	Get(ctx context.Context, id int64) (model.Transaction, error)
+	Update(ctx context.Context, id int64, input model.TransactionInput) (model.Transaction, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -26,6 +27,7 @@ func NewTransactionHandler(repository TransactionRepository) *TransactionHandler
 func (h *TransactionHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/transactions", h.list)
 	mux.HandleFunc("POST /api/v1/transactions", h.create)
+	mux.HandleFunc("PATCH /api/v1/transactions/{id}", h.update)
 	mux.HandleFunc("DELETE /api/v1/transactions/{id}", h.delete)
 }
 
@@ -96,6 +98,28 @@ func (h *TransactionHandler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, transaction)
+}
+
+func (h *TransactionHandler) update(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid transaction id", "VALIDATION_ERROR")
+		return
+	}
+
+	var input model.TransactionInput
+	if err := decodeJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error(), "VALIDATION_ERROR")
+		return
+	}
+
+	transaction, err := h.repository.Update(r.Context(), id, input)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, transaction)
 }
 
 func (h *TransactionHandler) delete(w http.ResponseWriter, r *http.Request) {

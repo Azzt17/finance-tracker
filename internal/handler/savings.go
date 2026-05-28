@@ -11,6 +11,7 @@ type SavingsRepository interface {
 	List(ctx context.Context, yearMonth string) ([]model.SavingsGoal, error)
 	Create(ctx context.Context, input model.SavingsGoalInput) (model.SavingsGoal, error)
 	Update(ctx context.Context, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 type SavingsGoalHandler struct {
@@ -25,6 +26,7 @@ func (h *SavingsGoalHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/savings", h.list)
 	mux.HandleFunc("POST /api/v1/savings", h.create)
 	mux.HandleFunc("PATCH /api/v1/savings/{id}", h.update)
+	mux.HandleFunc("DELETE /api/v1/savings/{id}", h.delete)
 }
 
 func (h *SavingsGoalHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -95,4 +97,18 @@ func (h *SavingsGoalHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, goal)
+}
+
+func (h *SavingsGoalHandler) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid savings id", "VALIDATION_ERROR")
+		return
+	}
+	if err := h.repository.Delete(r.Context(), id); err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "deleted successfully"})
 }
