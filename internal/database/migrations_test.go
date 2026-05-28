@@ -111,7 +111,11 @@ func assertColumn(
 	if err != nil {
 		t.Fatalf("query columns for %q: %v", table, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			t.Fatalf("close columns for %q: %v", table, err)
+		}
+	}()
 
 	for rows.Next() {
 		var (
@@ -176,7 +180,11 @@ func assertForeignKey(
 	if err != nil {
 		t.Fatalf("query foreign keys for %q: %v", table, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			t.Fatalf("close foreign keys for %q: %v", table, err)
+		}
+	}()
 
 	for rows.Next() {
 		var (
