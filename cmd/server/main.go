@@ -38,7 +38,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           handler.NewRouter(handler.Config{StaticDir: "web"}),
+		Handler:           handler.NewRouter(handler.Config{StaticDir: "web", DB: db}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
