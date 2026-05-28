@@ -5,170 +5,207 @@ on:
     branches: ["main", "master", "develop"]
   pull_request:
     branches: ["main", "master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   GO_VERSION: "1.25.9"
   BINARY_NAME: finance-tracker
+  GOLANGCI_LINT_VERSION: v2.12.2
+  GOSEC_VERSION: v2.26.1
+  GOVULNCHECK_VERSION: v1.3.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ──────────────────────────────────────────────
-  # JOB 1 — Lint & Static Analysis
-  # ──────────────────────────────────────────────
-  lint:
-    name: "🔍 Lint"
+  module-hygiene:
+    name: Module Hygiene
     runs-on: ubuntu-latest
+    outputs:
+      has_go_files: ${{ steps.detect.outputs.has_go_files }}
+      has_packages: ${{ steps.detect.outputs.has_packages }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
-
-  # ──────────────────────────────────────────────
-  # JOB 2 — Unit Test + Coverage
-  # ──────────────────────────────────────────────
-  test:
-    name: "🧪 Test"
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Run tests (race detector + coverage)
+      - name: Detect Go project state
+        id: detect
         run: |
-          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          if find . -path ./.git -prune -o -name '*.go' -type f -print -quit | grep -q .; then
+            echo "has_go_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_go_files=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Coverage threshold check (min 60%)
+          package_count=$(go list ./... 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$package_count" -gt 0 ]; then
+            echo "has_packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_packages=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Verify module checksums
+        run: go mod verify
+
+      - name: Check go.mod and go.sum are tidy
+        if: steps.detect.outputs.has_packages == 'true'
+        run: go mod tidy -diff
+
+      - name: Check Go formatting
+        if: steps.detect.outputs.has_go_files == 'true'
         run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Total coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-            echo "❌ Coverage ${COVERAGE}% is below threshold of 60%"
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following Go files need gofmt:"
+            echo "$unformatted"
             exit 1
           fi
-          echo "✅ Coverage passed: ${COVERAGE}%"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: module-hygiene
+    if: needs.module-hygiene.outputs.has_packages == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          args: --timeout=5m ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: module-hygiene
+    if: needs.module-hygiene.outputs.has_packages == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run tests with race detector and coverage
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Enforce coverage threshold
+        run: |
+          coverage=$(go tool cover -func=coverage.out | awk '/^total:/ { sub(/%/, "", $3); print $3 }')
+          echo "Total coverage: ${coverage}%"
+          awk -v coverage="$coverage" 'BEGIN { exit !(coverage >= 60) }'
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage.out
           retention-days: 7
+          if-no-files-found: error
 
-  # ──────────────────────────────────────────────
-  # JOB 3 — SAST: gosec
-  # Mendeteksi hardcoded secrets, SQL injection risk,
-  # insecure crypto, dangerous function calls, dll.
-  # ──────────────────────────────────────────────
   sast:
-    name: "🛡️ SAST (gosec)"
+    name: SAST
     runs-on: ubuntu-latest
-    needs: lint
+    needs: module-hygiene
+    if: needs.module-hygiene.outputs.has_packages == 'true'
     permissions:
       contents: read
-      security-events: write # untuk upload SARIF ke GitHub Security tab
+      security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Run gosec
-        uses: securego/gosec@master
-        with:
-          # -no-fail → pipeline tidak gagal, tapi tetap upload hasil ke Security tab
-          # Ubah ke args: '' jika ingin pipeline gagal saat ada finding HIGH/CRITICAL
-          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
+        run: |
+          go run github.com/securego/gosec/v2/cmd/gosec@${{ env.GOSEC_VERSION }} \
+            -fmt sarif \
+            -out gosec-results.sarif \
+            ./...
 
-      - name: Upload SARIF to GitHub Security tab
+      - name: Upload gosec SARIF
+        if: always() && hashFiles('gosec-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: gosec-results.sarif
 
-  # ──────────────────────────────────────────────
-  # JOB 4 — Dependency Vulnerability Scan (govulncheck)
-  # Menggunakan Go official vulnerability database
-  # dari https://vuln.go.dev
-  # ──────────────────────────────────────────────
   vuln-check:
-    name: "🔒 Dependency Vuln (govulncheck)"
+    name: Dependency Vulnerability Check
     runs-on: ubuntu-latest
-    needs: lint
+    needs: module-hygiene
+    if: needs.module-hygiene.outputs.has_packages == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }}
 
       - name: Run govulncheck
-        # Exit code != 0 jika ada known vulnerability yang aktif dipanggil dalam kode
         run: govulncheck ./...
 
-  # ──────────────────────────────────────────────
-  # JOB 5 — Dependency License & Supply Chain Check
-  # Memastikan tidak ada dependency dengan lisensi
-  # berbahaya atau typosquatting package
-  # ──────────────────────────────────────────────
   dependency-review:
-    name: "📦 Dependency Review"
+    name: Dependency Review
     runs-on: ubuntu-latest
-    # Hanya berjalan pada Pull Request
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5
         with:
-          # Blok PR jika ada dependency dengan lisensi non-komersial atau CVE
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
 
-  # ──────────────────────────────────────────────
-  # JOB 6 — Secret Scanning (Gitleaks)
-  # Mencegah hardcoded API key, token, password,
-  # private key masuk ke repository
-  # ──────────────────────────────────────────────
   secret-scan:
-    name: "🔑 Secret Scan (gitleaks)"
+    name: Secret Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          # Full history untuk scan seluruh commit history, bukan hanya HEAD
           fetch-depth: 0
 
       - name: Run Gitleaks
@@ -176,43 +213,41 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ──────────────────────────────────────────────
-  # JOB 7 — Build (gating job)
-  # Hanya berjalan jika semua security job passed.
-  # Binary tidak akan terbuild jika ada issue keamanan.
-  # ──────────────────────────────────────────────
   build:
-    name: "🏗️ Build"
+    name: Build
     runs-on: ubuntu-latest
-    needs: [test, sast, vuln-check, secret-scan]
+    needs: [module-hygiene, lint, test, sast, vuln-check, secret-scan]
+    if: needs.module-hygiene.outputs.has_packages == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Build binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-          go build \
-            -ldflags="-s -w -X main.version=${{ github.sha }}" \
-            -trimpath \
-            -o ${{ env.BINARY_NAME }} \
-            ./...
+      - name: Build all packages
+        run: go build -trimpath ./...
 
-        # Flag penjelasan:
-        # CGO_ENABLED=0  → static binary, tidak ada C dependency (lebih portable & aman)
-        # -s -w          → strip debug symbols (binary lebih kecil, harder to reverse)
-        # -X main.version→ embed commit SHA ke binary untuk traceability
-        # -trimpath      → hapus absolute build path (tidak leak info filesystem kamu)
+      - name: Build application binary
+        run: |
+          mkdir -p dist
+          if [ -d "./cmd/${BINARY_NAME}" ]; then
+            go build \
+              -trimpath \
+              -ldflags="-s -w -X main.version=${GITHUB_SHA}" \
+              -o "dist/${BINARY_NAME}" \
+              "./cmd/${BINARY_NAME}"
+          else
+            echo "No ./cmd/${BINARY_NAME} package found; binary artifact skipped."
+          fi
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.BINARY_NAME }}-${{ github.sha }}
-          path: ${{ env.BINARY_NAME }}
+          path: dist/
           retention-days: 3
+          if-no-files-found: ignore
