@@ -46,6 +46,11 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('offline', () => this.updateOfflineStatus(true));
             await this.initDB();
             this.loadInitialData();
+            
+            // Trigger sync if starting up online with pending items
+            if (!this.isOffline && this.pendingSync > 0) {
+                this.syncTransactions();
+            }
         },
 
         async initDB() {
@@ -307,6 +312,32 @@ document.addEventListener('alpine:init', () => {
             if(!confirm("Hapus target tabungan?")) return;
             const res = await fetch(`/api/v1/savings/${id}`, { method: 'DELETE' });
             if(res.ok) { this.showFeedback("✓ Dihapus"); this.loadInitialData(); }
+        },
+        
+        async addSavingsProgress(goal, amountStr) {
+            const amount = parseInt(amountStr, 10);
+            if(isNaN(amount) || amount <= 0) return;
+            if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
+            
+            const payload = {
+                name: goal.name,
+                target_amount: goal.target_amount,
+                current_saved: goal.current_saved + amount,
+                year_month: goal.year_month,
+                is_achieved: (goal.current_saved + amount) >= goal.target_amount
+            };
+            
+            const res = await fetch(`/api/v1/savings/${goal.id}`, { 
+                method: 'PATCH', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload) 
+            });
+            if(res.ok) { 
+                this.showFeedback("✓ Tabungan bertambah"); 
+                this.loadInitialData(); 
+            } else {
+                this.showFeedback("❌ Gagal menambah tabungan", true);
+            }
         },
 
         showFeedback(msg, isError = false) {

@@ -182,9 +182,14 @@
 
             <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
                 <article>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
                         <strong x-text="goal.name"></strong>
-                        <span x-text="'Rp ' + goal.current_saved.toLocaleString('id-ID') + ' / ' + goal.target_amount.toLocaleString('id-ID')"></span>
+                        <div style="display: flex; align-items: center;">
+                            <span x-text="'Rp ' + goal.current_saved.toLocaleString('id-ID') + ' / ' + goal.target_amount.toLocaleString('id-ID')" style="font-size: 14px;"></span>
+                            <button class="btn-icon" style="margin-left: 8px; color: var(--pico-primary);" @click="let amt = prompt('Masukkan nominal yang ditabung:'); if(amt) $store.finance.addSavingsProgress(goal, amt);" title="Tambah Tabungan">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
                     </div>
                     <progress :value="goal.current_saved" :max="goal.target_amount" style="margin: 0;"></progress>
                 </article>
@@ -248,7 +253,9 @@
                     <template x-for="cat in $store.finance.categories" :key="cat.id">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
                             <span x-text="`${cat.icon_emoji} ${cat.name}`"></span>
-                            <button class="btn-icon" @click="$store.finance.deleteCategory(cat.id)">🗑️</button>
+                            <button class="btn-icon" @click="$store.finance.deleteCategory(cat.id)" title="Hapus">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                         </div>
                     </template>
                 </div>
@@ -263,8 +270,10 @@
                 <div style="border-top: 1px solid #334155; padding-top: 0.5rem;">
                     <template x-for="goal in $store.finance.savingsGoals" :key="goal.id">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
-                            <span x-text="`${goal.name} (Rp ${goal.target_amount.toLocaleString()})`"></span>
-                            <button class="btn-icon" @click="$store.finance.deleteSavings(goal.id)">🗑️</button>
+                            <span x-text="`${goal.name} (Rp ${goal.target_amount.toLocaleString('id-ID')})`"></span>
+                            <button class="btn-icon" @click="$store.finance.deleteSavings(goal.id)" title="Hapus">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                         </div>
                     </template>
                 </div>
