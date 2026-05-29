@@ -1,0 +1,35 @@
+services:
+  finance-tracker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ADDR: ":8080"
+      DATABASE_URL: "file:/data/finance-tracker.db?_foreign_keys=on&_busy_timeout=5000"
+      APP_USERNAME: "${APP_USERNAME}"
+      APP_PASSWORD: "${APP_PASSWORD}"
+    volumes:
+      - finance_data:/data
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - finance-tracker
+    environment:
+      DOMAIN: "${DOMAIN}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  finance_data:
+  caddy_data:
+  caddy_config:
