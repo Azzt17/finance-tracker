@@ -14,18 +14,18 @@ The app listens on `:8080` by default and stores local data in `finance-tracker.
 ## Configuration
 
 - `ADDR`: HTTP listen address. Default: `:8080`.
-- `DATABASE_URL`: SQLite DSN. On Fly, use `file:/data/finance-tracker.db?_foreign_keys=on&_busy_timeout=5000`.
+- `DATABASE_URL`: SQLite DSN. In Docker, use `file:/data/finance-tracker.db?_foreign_keys=on&_busy_timeout=5000`.
 - `APP_USERNAME` and `APP_PASSWORD`: enable Basic Auth when both are set.
 - `CORS_ALLOWED_ORIGIN`: optional allowed origin for cross-origin API access. Leave empty for same-origin use.
 
-## Fly.io Deployment
+## Cloudflare Tunnel Deployment
 
-Create the persistent volume before first deploy:
+For personal use, the recommended deployment path is Docker Compose plus Cloudflare Tunnel:
 
 ```sh
-fly volumes create finance_data --size 1 --region sin
-fly secrets set APP_USERNAME='your-user' APP_PASSWORD='your-password'
-fly deploy
+cd deploy/cloudflare
+cp .env.example .env
+docker compose up -d --build
 ```
 
-The SQLite database is stored under `/data`, which is mounted from the Fly volume.
+See `deploy/cloudflare/README.md` for the full setup.

@@ -1,3 +1,0 @@
-{$DOMAIN} {
-	reverse_proxy finance-tracker:8080
-}

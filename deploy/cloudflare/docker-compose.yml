@@ -14,22 +14,12 @@ services:
     expose:
       - "8080"
 
-  caddy:
-    image: caddy:2.10-alpine
+  cloudflared:
+    image: cloudflare/cloudflared:2026.5.0
     restart: unless-stopped
     depends_on:
       - finance-tracker
-    environment:
-      DOMAIN: "${DOMAIN}"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
 
 volumes:
   finance_data:
-  caddy_data:
-  caddy_config:
