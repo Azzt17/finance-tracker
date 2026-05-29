@@ -17,7 +17,7 @@ import (
 
 func main() {
 	addr := env("ADDR", ":8080")
-	databaseURL := env("DATABASE_URL", "file:finance-tracker.db?_foreign_keys=on&_busy_timeout=5000")
+	databaseURL := databaseURL()
 
 	ctx := context.Background()
 	db, err := database.Open(ctx, databaseURL)
@@ -44,8 +44,14 @@ func main() {
 	slog.Info("database seeded")
 
 	server := &http.Server{
-		Addr:              addr,
-		Handler:           handler.NewRouter(handler.Config{StaticFS: web.StaticFS, DB: db}),
+		Addr: addr,
+		Handler: handler.NewRouter(handler.Config{
+			StaticFS:          web.StaticFS,
+			DB:                db,
+			AuthUsername:      os.Getenv("APP_USERNAME"),
+			AuthPassword:      os.Getenv("APP_PASSWORD"),
+			CORSAllowedOrigin: os.Getenv("CORS_ALLOWED_ORIGIN"),
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -80,4 +86,15 @@ func env(key, fallback string) string {
 	}
 
 	return value
+}
+
+func databaseURL() string {
+	if value := os.Getenv("DATABASE_URL"); value != "" {
+		return value
+	}
+	if os.Getenv("FLY_APP_NAME") != "" {
+		return "file:/data/finance-tracker.db?_foreign_keys=on&_busy_timeout=5000"
+	}
+
+	return "file:finance-tracker.db?_foreign_keys=on&_busy_timeout=5000"
 }

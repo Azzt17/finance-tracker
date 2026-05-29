@@ -1,0 +1,13 @@
+.git
+.github
+.agents
+.codex
+.antigravitycli
+
+*.db
+*.env
+coverage.out
+server
+server.log
+tmp-server
+finance-tracker

@@ -70,13 +70,20 @@ func (r *SavingsRepository) Create(ctx context.Context, input model.SavingsGoalI
 }
 
 func (r *SavingsRepository) Update(ctx context.Context, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error) {
-	_, err := r.db.ExecContext(ctx, `
+	result, err := r.db.ExecContext(ctx, `
 		UPDATE savings_goals
 		SET name = ?, target_amount = ?, current_saved = ?, year_month = ?, is_achieved = ?
 		WHERE id = ?
 	`, input.Name, input.TargetAmount, input.CurrentSaved, input.YearMonth, boolToInt(input.IsAchieved), id)
 	if err != nil {
 		return model.SavingsGoal{}, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.SavingsGoal{}, err
+	}
+	if affected == 0 {
+		return model.SavingsGoal{}, ErrNotFound
 	}
 
 	return model.SavingsGoal{

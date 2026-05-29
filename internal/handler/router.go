@@ -10,8 +10,11 @@ import (
 )
 
 type Config struct {
-	StaticFS fs.FS
-	DB       *sql.DB
+	StaticFS          fs.FS
+	DB                *sql.DB
+	AuthUsername      string
+	AuthPassword      string
+	CORSAllowedOrigin string
 }
 
 func NewRouter(config Config) http.Handler {
@@ -41,8 +44,15 @@ func NewRouter(config Config) http.Handler {
 		mux.Handle("GET /", http.FileServer(http.FS(config.StaticFS)))
 	}
 
-	// Stack middlewares: CORS -> Recoverer -> Logger
-	return middleware.CORS(middleware.Recoverer(middleware.Logger(mux)))
+	var app http.Handler = mux
+	if config.AuthUsername != "" || config.AuthPassword != "" {
+		app = middleware.BasicAuth(app, config.AuthUsername, config.AuthPassword, "/healthz")
+	}
+
+	return middleware.CORS(
+		middleware.Recoverer(middleware.Logger(app)),
+		config.CORSAllowedOrigin,
+	)
 }
 
 func healthCheck(w http.ResponseWriter, _ *http.Request) {

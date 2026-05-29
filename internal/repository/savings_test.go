@@ -64,3 +64,21 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 		t.Errorf("expected 0 goal after delete, got %d", len(goals))
 	}
 }
+
+func TestSavingsRepository_UpdateNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	repo := repository.NewSavingsRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.Update(ctx, 999, model.SavingsGoalInput{
+		Name:         "Missing",
+		TargetAmount: 1000000,
+		CurrentSaved: 100000,
+		YearMonth:    "2026-05",
+	})
+	if err != repository.ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}

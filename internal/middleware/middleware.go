@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
@@ -57,15 +58,45 @@ func Recoverer(next http.Handler) http.Handler {
 	})
 }
 
-func CORS(next http.Handler) http.Handler {
+func CORS(next http.Handler, allowedOrigin string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if allowedOrigin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		}
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func BasicAuth(next http.Handler, username string, password string, exemptPaths ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, path := range exemptPaths {
+			if r.URL.Path == path {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		if username == "" || password == "" {
+			http.Error(w, "basic auth is not fully configured", http.StatusInternalServerError)
+			return
+		}
+
+		gotUsername, gotPassword, ok := r.BasicAuth()
+		usernameOK := subtle.ConstantTimeCompare([]byte(gotUsername), []byte(username)) == 1
+		passwordOK := subtle.ConstantTimeCompare([]byte(gotPassword), []byte(password)) == 1
+		if !ok || !usernameOK || !passwordOK {
+			w.Header().Set("WWW-Authenticate", `Basic realm="finance-tracker", charset="UTF-8"`)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

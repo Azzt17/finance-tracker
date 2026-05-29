@@ -28,6 +28,16 @@ func TestMigrateCreatesInitialSchema(t *testing.T) {
 		t.Fatalf("migrate database twice: %v", err)
 	}
 
+	var appliedCount int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM schema_migrations WHERE version = 1 AND name = 'initial_schema'
+	`).Scan(&appliedCount); err != nil {
+		t.Fatalf("read migration version: %v", err)
+	}
+	if appliedCount != 1 {
+		t.Fatalf("expected migration version 1 to be recorded once, got %d", appliedCount)
+	}
+
 	for _, table := range []string{
 		"schema_migrations",
 		"categories",
