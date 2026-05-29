@@ -46,7 +46,15 @@ func NewRouter(config Config) http.Handler {
 
 	var app http.Handler = mux
 	if config.AuthUsername != "" || config.AuthPassword != "" {
-		app = middleware.BasicAuth(app, config.AuthUsername, config.AuthPassword, "/healthz")
+		app = middleware.BasicAuth(
+			app,
+			config.AuthUsername,
+			config.AuthPassword,
+			"/healthz",
+			"/manifest.json",
+			"/sw.js",
+			"/static/icons/*",
+		)
 	}
 
 	return middleware.CORS(

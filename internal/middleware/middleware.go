@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -77,7 +78,7 @@ func CORS(next http.Handler, allowedOrigin string) http.Handler {
 func BasicAuth(next http.Handler, username string, password string, exemptPaths ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, path := range exemptPaths {
-			if r.URL.Path == path {
+			if authPathExempt(r.URL.Path, path) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -99,4 +100,12 @@ func BasicAuth(next http.Handler, username string, password string, exemptPaths 
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func authPathExempt(requestPath string, exemptPath string) bool {
+	if strings.HasSuffix(exemptPath, "*") {
+		return strings.HasPrefix(requestPath, strings.TrimSuffix(exemptPath, "*"))
+	}
+
+	return requestPath == exemptPath
 }

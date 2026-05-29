@@ -62,7 +62,7 @@ func TestBasicAuth(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	mw := middleware.BasicAuth(handler, "user", "pass", "/healthz")
+	mw := middleware.BasicAuth(handler, "user", "pass", "/healthz", "/static/icons/*")
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -84,6 +84,13 @@ func TestBasicAuth(t *testing.T) {
 	mw.ServeHTTP(w, req)
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("expected exempt path status %d, got %d", http.StatusNoContent, w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/static/icons/icon-192x192.png", nil)
+	w = httptest.NewRecorder()
+	mw.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected exempt prefix status %d, got %d", http.StatusNoContent, w.Code)
 	}
 }
 
