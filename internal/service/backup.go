@@ -23,7 +23,7 @@ func extractDBPath(databaseURL string) string {
 // BackupDatabase runs VACUUM INTO to create a safe backup of the database
 func BackupDatabase(db *sql.DB, databaseURL string) (string, error) {
 	dbPath := extractDBPath(databaseURL)
-	
+
 	// Create backup directory next to the database file
 	backupDir := filepath.Join(filepath.Dir(dbPath), "backup")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
