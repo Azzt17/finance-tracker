@@ -14,12 +14,18 @@ type Config struct {
 	DB                *sql.DB
 	AuthUsername      string
 	AuthPassword      string
+	Version           string
 }
 
 func NewRouter(config Config) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /healthz", healthCheck)
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"status":  "ok",
+			"version": config.Version,
+		})
+	})
 
 	transactions := NewTransactionHandler(repository.NewTransactionRepository(config.DB))
 	transactions.RegisterRoutes(mux)
@@ -57,10 +63,4 @@ func NewRouter(config Config) http.Handler {
 	}
 
 	return middleware.Recoverer(middleware.Logger(app))
-}
-
-func healthCheck(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
-		"status": "ok",
-	})
 }

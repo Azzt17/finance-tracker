@@ -15,6 +15,8 @@ import (
 	"github.com/Azzt17/finance-tracker/web"
 )
 
+var version = "dev"
+
 func main() {
 	addr := env("ADDR", ":8080")
 	databaseURL := databaseURL()
@@ -46,10 +48,11 @@ func main() {
 	server := &http.Server{
 		Addr: addr,
 		Handler: handler.NewRouter(handler.Config{
-			StaticFS:          web.StaticFS,
-			DB:                db,
-			AuthUsername:      os.Getenv("APP_USERNAME"),
-			AuthPassword:      os.Getenv("APP_PASSWORD"),
+			StaticFS:     web.StaticFS,
+			DB:           db,
+			AuthUsername: os.Getenv("APP_USERNAME"),
+			AuthPassword: os.Getenv("APP_PASSWORD"),
+			Version:      version,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
