@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Azzt17/finance-tracker/internal/service"
 )
@@ -44,7 +45,11 @@ func (h *SystemHandler) DownloadBackup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SystemHandler) TriggerBackup(w http.ResponseWriter, r *http.Request) {
-	// Middleware will ensure this is only accessible from localhost
+	// Ensure this is only accessible from localhost since it bypasses Basic Auth
+	if r.RemoteAddr != "" && !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") && !strings.HasPrefix(r.RemoteAddr, "[::1]:") {
+		http.Error(w, "Forbidden: Localhost only", http.StatusForbidden)
+		return
+	}
 	destPath, err := service.BackupDatabase(h.Config.DB, h.Config.DatabaseURL)
 	if err != nil {
 		slog.Error("Failed to trigger internal backup", "error", err)

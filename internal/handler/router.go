@@ -71,6 +71,7 @@ func NewRouter(config Config) http.Handler {
 			"/manifest.json",
 			"/sw.js",
 			"/static/icons/*",
+			"/internal/*",
 		)
 	}
 
