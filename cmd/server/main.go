@@ -50,7 +50,6 @@ func main() {
 			DB:                db,
 			AuthUsername:      os.Getenv("APP_USERNAME"),
 			AuthPassword:      os.Getenv("APP_PASSWORD"),
-			CORSAllowedOrigin: os.Getenv("CORS_ALLOWED_ORIGIN"),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}

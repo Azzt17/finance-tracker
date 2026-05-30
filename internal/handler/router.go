@@ -14,7 +14,6 @@ type Config struct {
 	DB                *sql.DB
 	AuthUsername      string
 	AuthPassword      string
-	CORSAllowedOrigin string
 }
 
 func NewRouter(config Config) http.Handler {
@@ -57,10 +56,7 @@ func NewRouter(config Config) http.Handler {
 		)
 	}
 
-	return middleware.CORS(
-		middleware.Recoverer(middleware.Logger(app)),
-		config.CORSAllowedOrigin,
-	)
+	return middleware.Recoverer(middleware.Logger(app))
 }
 
 func healthCheck(w http.ResponseWriter, _ *http.Request) {
