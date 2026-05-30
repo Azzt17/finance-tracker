@@ -28,6 +28,8 @@ document.addEventListener('alpine:init', () => {
         savingsGoals: [],
         recentTransactions: [],
         categories: [],
+        analyticsMonth: new Date().toISOString().slice(0, 7),
+        chartInstances: { category: null, trend: null, daily: null },
         
         isLoading: false,
         isOffline: !navigator.onLine,
@@ -169,6 +171,9 @@ document.addEventListener('alpine:init', () => {
         changeView(viewName) {
             this.currentView = viewName;
             window.scrollTo(0, 0);
+            if (viewName === 'analytics') {
+                this.loadAnalyticsData();
+            }
         },
 
         getCategoryName(id) {
@@ -404,6 +409,127 @@ document.addEventListener('alpine:init', () => {
                 } catch (err) {
                     return; // Masih belum ada koneksi nyata
                 }
+            }
+        },
+
+        async loadAnalyticsData() {
+            if (this.isOffline) {
+                this.showFeedback("Analisis hanya tersedia online", true);
+                return;
+            }
+            try {
+                this.isLoading = true;
+                const [categoryRes, trendRes, dailyRes] = await Promise.all([
+                    fetch(`/api/v1/analytics/spending-by-category?year_month=${this.analyticsMonth}`),
+                    fetch(`/api/v1/analytics/monthly-trend`),
+                    fetch(`/api/v1/analytics/daily-spending?year_month=${this.analyticsMonth}`)
+                ]);
+
+                const categoryData = categoryRes.ok ? await categoryRes.json() : null;
+                const trendData = trendRes.ok ? await trendRes.json() : null;
+                const dailyData = dailyRes.ok ? await dailyRes.json() : null;
+
+                this.renderCharts(categoryData, trendData, dailyData);
+            } catch (err) {
+                console.error("Gagal memuat analitik", err);
+                this.showFeedback("❌ Gagal memuat analitik", true);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        renderCharts(categoryData, trendData, dailyData) {
+            // Konfigurasi warna
+            const bgColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'];
+            
+            // Destroy existing charts
+            if (this.chartInstances.category) this.chartInstances.category.destroy();
+            if (this.chartInstances.trend) this.chartInstances.trend.destroy();
+            if (this.chartInstances.daily) this.chartInstances.daily.destroy();
+
+            // 1. Chart Kategori (Donut)
+            if (categoryData && document.getElementById('categoryChart')) {
+                const ctx = document.getElementById('categoryChart').getContext('2d');
+                this.chartInstances.category = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryData.breakdown.map(item => `${item.icon_emoji} ${item.category_name}`.trim()),
+                        datasets: [{
+                            data: categoryData.breakdown.map(item => item.total),
+                            backgroundColor: bgColors,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { color: '#f8fafc' } } }
+                    }
+                });
+            }
+
+            // 2. Chart Trend Bulanan (Bar/Line)
+            if (trendData && document.getElementById('trendChart')) {
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                this.chartInstances.trend = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: trendData.data.map(d => d.year_month),
+                        datasets: [
+                            {
+                                label: 'Pengeluaran',
+                                data: trendData.data.map(d => d.total_spent),
+                                backgroundColor: '#ef4444',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Budget',
+                                data: trendData.data.map(d => d.total_budget),
+                                type: 'line',
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 5],
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        },
+                        plugins: { legend: { labels: { color: '#f8fafc' } } }
+                    }
+                });
+            }
+
+            // 3. Chart Harian (Line)
+            if (dailyData && document.getElementById('dailyChart')) {
+                const ctx = document.getElementById('dailyChart').getContext('2d');
+                this.chartInstances.daily = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dailyData.data.map(d => parseInt(d.date.split('-')[2], 10)),
+                        datasets: [{
+                            label: 'Harian',
+                            data: dailyData.data.map(d => d.total),
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
             }
         }
     });
