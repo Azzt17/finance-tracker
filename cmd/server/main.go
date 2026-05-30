@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azzt17/finance-tracker/internal/database"
 	"github.com/Azzt17/finance-tracker/internal/handler"
+	"github.com/Azzt17/finance-tracker/internal/service"
 	"github.com/Azzt17/finance-tracker/web"
 )
 
@@ -45,6 +46,10 @@ func main() {
 	}
 	slog.Info("database seeded")
 
+	// Start automated backup cron
+	service.StartBackupCron(db, databaseURL)
+	slog.Info("automated backup service started")
+
 	server := &http.Server{
 		Addr: addr,
 		Handler: handler.NewRouter(handler.Config{
@@ -53,6 +58,7 @@ func main() {
 			AuthUsername: os.Getenv("APP_USERNAME"),
 			AuthPassword: os.Getenv("APP_PASSWORD"),
 			Version:      version,
+			DatabaseURL:  databaseURL,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}

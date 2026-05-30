@@ -15,6 +15,7 @@ type Config struct {
 	AuthUsername string
 	AuthPassword string
 	Version      string
+	DatabaseURL  string
 }
 
 func NewRouter(config Config) http.Handler {
@@ -47,6 +48,9 @@ func NewRouter(config Config) http.Handler {
 
 	analytics := NewAnalyticsHandler(repository.NewAnalyticsRepository(config.DB))
 	analytics.RegisterRoutes(mux)
+
+	system := &SystemHandler{Config: config}
+	mux.HandleFunc("GET /api/v1/system/backup", system.DownloadBackup)
 
 	if config.StaticFS != nil {
 		mux.Handle("GET /", http.FileServer(http.FS(config.StaticFS)))

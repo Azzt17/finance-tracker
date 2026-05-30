@@ -163,8 +163,13 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
             } catch (err) {
-                console.error("Sinkronisasi tertunda", err);
+                console.error("Gagal sinkronisasi otomatis", err);
             }
+        },
+
+        downloadBackup() {
+            // Direct user to the backup endpoint which triggers file download
+            window.open('/api/v1/system/backup', '_blank');
         },
 
         changeView(viewName) {
