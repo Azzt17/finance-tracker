@@ -12,8 +12,8 @@ mkdir -p "$BACKUP_DIR"
 echo "=== Backup dimulai: $(date) ===" >> "$LOG_FILE"
 
 # 1. Panggil endpoint internal untuk membuat VACUUM INTO snapshot
-echo "Memicu endpoint /internal/backup..." >> "$LOG_FILE"
-RESPONSE=$(curl -s -X POST http://localhost:8080/internal/backup)
+echo "Memicu endpoint /internal/backup dari dalam container..." >> "$LOG_FILE"
+RESPONSE=$(docker exec $CONTAINER_NAME wget -qO- --post-data="" http://127.0.0.1:8080/internal/backup)
 if [[ $RESPONSE != *"\"status\":\"ok\""* ]]; then
     echo "ERROR: Gagal memicu backup internal. Response: $RESPONSE" >> "$LOG_FILE"
     exit 1
