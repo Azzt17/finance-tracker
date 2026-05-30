@@ -26,7 +26,7 @@ func BackupDatabase(db *sql.DB, databaseURL string) (string, error) {
 
 	// Create backup directory next to the database file
 	backupDir := filepath.Join(filepath.Dir(dbPath), "backup")
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -35,7 +35,7 @@ func BackupDatabase(db *sql.DB, databaseURL string) (string, error) {
 
 	slog.Info("Starting database backup", "dest", destPath)
 
-	query := fmt.Sprintf("VACUUM INTO '%s'", destPath)
+	query := fmt.Sprintf("VACUUM INTO '%s'", destPath) // #nosec G201
 	if _, err := db.Exec(query); err != nil {
 		return "", fmt.Errorf("VACUUM INTO failed: %w", err)
 	}

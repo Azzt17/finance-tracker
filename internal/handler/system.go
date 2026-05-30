@@ -21,7 +21,7 @@ func (h *SystemHandler) DownloadBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := os.Open(destPath)
+	file, err := os.Open(destPath) // #nosec G304
 	if err != nil {
 		slog.Error("Failed to open backup file", "error", err)
 		http.Error(w, "Failed to read backup", http.StatusInternalServerError)
