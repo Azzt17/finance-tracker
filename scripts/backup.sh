@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Konfigurasi
-BACKUP_DIR="/home/deploy/backups"
-LOG_FILE="/var/log/finance-backup.log"
-DATE=$(date +%Y-%m-%d)
-BACKUP_FILE="finance-tracker-${DATE}.db"
-CONTAINER_NAME="cloudflare-finance-tracker-1"
+BACKUP_DIR="$HOME/backups"
+LOG_FILE="$HOME/finance-backup.log"
+# Mencari nama container backend secara otomatis
+CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep finance-tracker | grep -v cloudflared | head -n 1)
 
 # Buat direktori backup jika belum ada
 mkdir -p "$BACKUP_DIR"
@@ -20,10 +19,21 @@ if [[ $RESPONSE != *"\"status\":\"ok\""* ]]; then
     exit 1
 fi
 
-echo "Snapshot berhasil dibuat di dalam container." >> "$LOG_FILE"
+# Ekstrak path file dari response JSON tanpa menggunakan jq
+BACKUP_PATH=$(echo $RESPONSE | grep -o '"backup_path":"[^"]*' | grep -o '[^"]*$')
+FILENAME=$(basename "$BACKUP_PATH")
+
+echo "Snapshot berhasil dibuat di container pada path: $BACKUP_PATH" >> "$LOG_FILE"
 
 # 2. Salin file dari container ke host
-echo "Menyalin file dari container..." >> "$LOG_FILE"
-docker cp "${CONTAINER_NAME}:/data/backup/finance-tracker.db" "${BACKUP_DIR}/${BACKUP_FILE}" 2>> "$LOG_FILE"
-# Wait, my backup code writes to /data/backup/finance-tracker_YYYYMMDD_HHMMSS.db.
-# I need to handle the dynamic filename, or I can just copy the whole directory and sync it!
+echo "Menyalin file $FILENAME dari container..." >> "$LOG_FILE"
+docker cp "${CONTAINER_NAME}:${BACKUP_PATH}" "${BACKUP_DIR}/${FILENAME}" 2>> "$LOG_FILE"
+
+# 3. Sinkronisasi dengan Google Drive menggunakan rclone
+echo "Mengunggah ke Google Drive..." >> "$LOG_FILE"
+rclone copy "${BACKUP_DIR}/${FILENAME}" gdrive:finance-tracker-backup/ 2>> "$LOG_FILE"
+
+# 4. Hapus file backup lokal di VPS yang usianya lebih dari 7 hari
+find "$BACKUP_DIR" -name "finance-tracker_*.db" -type f -mtime +7 -delete
+
+echo "=== Backup selesai: $(date) ===" >> "$LOG_FILE"
