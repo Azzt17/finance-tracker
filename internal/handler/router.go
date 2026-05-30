@@ -45,6 +45,9 @@ func NewRouter(config Config) http.Handler {
 	sync := NewSyncHandler(repository.NewSyncRepository(config.DB))
 	sync.RegisterRoutes(mux)
 
+	analytics := NewAnalyticsHandler(repository.NewAnalyticsRepository(config.DB))
+	analytics.RegisterRoutes(mux)
+
 	if config.StaticFS != nil {
 		mux.Handle("GET /", http.FileServer(http.FS(config.StaticFS)))
 	}
