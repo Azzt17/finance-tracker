@@ -10,8 +10,8 @@ services:
       APP_PASSWORD: "${APP_PASSWORD}"
     volumes:
       - finance_data:/data
-    expose:
-      - "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
 
   cloudflared:
     image: cloudflare/cloudflared:2026.5.0
