@@ -29,7 +29,6 @@ document.addEventListener('alpine:init', () => {
         recentTransactions: [],
         categories: [],
         analyticsMonth: new Date().toISOString().slice(0, 7),
-        chartInstances: { category: null, trend: null, daily: null },
         
         isLoading: false,
         isOffline: !navigator.onLine,
@@ -443,14 +442,16 @@ document.addEventListener('alpine:init', () => {
             const bgColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'];
             
             // Destroy existing charts
-            if (this.chartInstances.category) this.chartInstances.category.destroy();
-            if (this.chartInstances.trend) this.chartInstances.trend.destroy();
-            if (this.chartInstances.daily) this.chartInstances.daily.destroy();
+            if (window.appChartInstances?.category) window.appChartInstances.category.destroy();
+            if (window.appChartInstances?.trend) window.appChartInstances.trend.destroy();
+            if (window.appChartInstances?.daily) window.appChartInstances.daily.destroy();
+
+            window.appChartInstances = window.appChartInstances || { category: null, trend: null, daily: null };
 
             // 1. Chart Kategori (Donut)
             if (categoryData && document.getElementById('categoryChart')) {
                 const ctx = document.getElementById('categoryChart').getContext('2d');
-                this.chartInstances.category = new Chart(ctx, {
+                window.appChartInstances.category = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: categoryData.breakdown.map(item => `${item.icon_emoji} ${item.category_name}`.trim()),
@@ -470,7 +471,7 @@ document.addEventListener('alpine:init', () => {
             // 2. Chart Trend Bulanan (Bar/Line)
             if (trendData && document.getElementById('trendChart')) {
                 const ctx = document.getElementById('trendChart').getContext('2d');
-                this.chartInstances.trend = new Chart(ctx, {
+                window.appChartInstances.trend = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: trendData.data.map(d => d.year_month),
@@ -506,7 +507,7 @@ document.addEventListener('alpine:init', () => {
             // 3. Chart Harian (Line)
             if (dailyData && document.getElementById('dailyChart')) {
                 const ctx = document.getElementById('dailyChart').getContext('2d');
-                this.chartInstances.daily = new Chart(ctx, {
+                window.appChartInstances.daily = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: dailyData.data.map(d => parseInt(d.date.split('-')[2], 10)),

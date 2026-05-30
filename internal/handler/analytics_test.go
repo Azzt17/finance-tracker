@@ -13,7 +13,7 @@ import (
 
 func setupAnalyticsRouter() (http.Handler, *sql.DB) {
 	db, _ := sql.Open("sqlite3", ":memory:")
-	db.Exec(`
+	_, _ = db.Exec(`
 		CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT, icon_emoji TEXT);
 		CREATE TABLE transactions (id INTEGER PRIMARY KEY, category_id INTEGER, amount INTEGER, transacted_at DATETIME);
 		CREATE TABLE budget_allocation (id INTEGER PRIMARY KEY, year_month TEXT, total_budget INTEGER);
@@ -29,7 +29,7 @@ func setupAnalyticsRouter() (http.Handler, *sql.DB) {
 
 func TestAnalyticsHandler_GetSpendingByCategory(t *testing.T) {
 	r, db := setupAnalyticsRouter()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/spending-by-category", nil)
 	w := httptest.NewRecorder()
@@ -48,7 +48,7 @@ func TestAnalyticsHandler_GetSpendingByCategory(t *testing.T) {
 
 func TestAnalyticsHandler_GetMonthlyTrend(t *testing.T) {
 	r, db := setupAnalyticsRouter()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/monthly-trend", nil)
 	w := httptest.NewRecorder()
@@ -67,7 +67,7 @@ func TestAnalyticsHandler_GetMonthlyTrend(t *testing.T) {
 
 func TestAnalyticsHandler_GetDailySpending(t *testing.T) {
 	r, db := setupAnalyticsRouter()
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/daily-spending", nil)
 	w := httptest.NewRecorder()
