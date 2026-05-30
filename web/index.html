@@ -284,6 +284,19 @@
                 </div>
             </article>
 
+            <article>
+                <header>
+                    <h3 style="margin: 0;">Sistem & Database</h3>
+                </header>
+                <div>
+                    <h4>Backup Database</h4>
+                    <p>Unduh file database SQLite saat ini (termasuk semua transaksi, anggaran, dan kategori) sebagai cadangan. Sistem juga otomatis membuat cadangan harian di server.</p>
+                    <button class="outline" @click="$store.finance.downloadBackup()">
+                        ⬇️ Unduh Backup Sekarang
+                    </button>
+                </div>
+            </article>
+
         </div>
 
         <!-- VIEW: ANALYTICS -->
