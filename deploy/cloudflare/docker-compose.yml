@@ -1,8 +1,7 @@
 services:
   finance-tracker:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
+    image: ghcr.io/azzt17/finance-tracker:latest
+    pull_policy: always
     restart: unless-stopped
     environment:
       ADDR: ":8080"
