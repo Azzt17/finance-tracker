@@ -8,7 +8,6 @@ import (
 	"github.com/Azzt17/finance-tracker/internal/middleware"
 )
 
-
 func TestBasicAuth(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
