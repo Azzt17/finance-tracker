@@ -10,11 +10,11 @@ import (
 )
 
 type Config struct {
-	StaticFS          fs.FS
-	DB                *sql.DB
-	AuthUsername      string
-	AuthPassword      string
-	Version           string
+	StaticFS     fs.FS
+	DB           *sql.DB
+	AuthUsername string
+	AuthPassword string
+	Version      string
 }
 
 func NewRouter(config Config) http.Handler {

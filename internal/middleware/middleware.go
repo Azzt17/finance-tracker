@@ -59,7 +59,6 @@ func Recoverer(next http.Handler) http.Handler {
 	})
 }
 
-
 func BasicAuth(next http.Handler, username string, password string, exemptPaths ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for _, path := range exemptPaths {
