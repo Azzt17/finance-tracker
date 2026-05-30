@@ -51,7 +51,7 @@ func NewRouter(config Config) http.Handler {
 
 	system := &SystemHandler{Config: config}
 	mux.HandleFunc("GET /api/v1/system/backup", system.DownloadBackup)
-	
+
 	// Internal endpoint (protected by localhost check)
 	mux.HandleFunc("POST /internal/backup", func(w http.ResponseWriter, r *http.Request) {
 		system.TriggerBackup(w, r)
