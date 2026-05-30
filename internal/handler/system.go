@@ -42,3 +42,18 @@ func (h *SystemHandler) DownloadBackup(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeContent(w, r, stat.Name(), stat.ModTime(), file)
 }
+
+func (h *SystemHandler) TriggerBackup(w http.ResponseWriter, r *http.Request) {
+	// Middleware will ensure this is only accessible from localhost
+	destPath, err := service.BackupDatabase(h.Config.DB, h.Config.DatabaseURL)
+	if err != nil {
+		slog.Error("Failed to trigger internal backup", "error", err)
+		http.Error(w, `{"status":"error","message":"Backup failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":      "ok",
+		"backup_path": destPath,
+	})
+}
