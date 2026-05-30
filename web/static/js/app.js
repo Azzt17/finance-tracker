@@ -395,9 +395,16 @@ document.addEventListener('alpine:init', () => {
         exportMarkdown() {
             window.location.href = `/api/v1/export/markdown?year_month=${this.currentMonth}`;
         },
-        updateOfflineStatus(status) {
+        async updateOfflineStatus(status) {
             this.isOffline = status;
-            if (!status && this.pendingSync > 0) this.syncTransactions();
+            if (!status && this.pendingSync > 0) {
+                try {
+                    await fetch('/healthz', { method: 'GET' });
+                    this.syncTransactions();
+                } catch (err) {
+                    return; // Masih belum ada koneksi nyata
+                }
+            }
         }
     });
 });
