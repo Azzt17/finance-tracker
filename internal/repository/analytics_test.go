@@ -14,7 +14,7 @@ func TestAnalyticsRepository_GetSpendingByCategory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
 		CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT, icon_emoji TEXT);
@@ -35,10 +35,10 @@ func TestAnalyticsRepository_GetSpendingByCategory(t *testing.T) {
 		t.Errorf("expected empty result, got total %d, breakdown %d", res.Total, len(res.Breakdown))
 	}
 
-	db.Exec(`INSERT INTO categories (id, name, icon_emoji) VALUES (1, 'Food', '🍔')`)
-	db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (1, 100, '2026-05-01 10:00:00')`)
-	db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (NULL, 50, '2026-05-02 10:00:00')`)
-	db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (1, -20, '2026-05-03 10:00:00')`)
+	_, _ = db.Exec(`INSERT INTO categories (id, name, icon_emoji) VALUES (1, 'Food', '🍔')`)
+	_, _ = db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (1, 100, '2026-05-01 10:00:00')`)
+	_, _ = db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (NULL, 50, '2026-05-02 10:00:00')`)
+	_, _ = db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (1, -20, '2026-05-03 10:00:00')`)
 
 	res, err = repo.GetSpendingByCategory(ctx, "2026-05")
 	if err != nil {
@@ -57,7 +57,7 @@ func TestAnalyticsRepository_GetMonthlyTrend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
 		CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount INTEGER, transacted_at DATETIME);
@@ -84,7 +84,7 @@ func TestAnalyticsRepository_GetDailySpending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
 		CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount INTEGER, transacted_at DATETIME);

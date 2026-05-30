@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finance-cache-v8'; // Ubah angka versi ini setiap kali ada pembaruan kode/UI
+const CACHE_NAME = 'finance-cache-v9'; // Ubah angka versi ini setiap kali ada pembaruan kode/UI
 
 // Daftar semua aset statis yang perlu di-cache saat proses instalasi PWA
 const PRECACHE_ASSETS = [
@@ -8,6 +8,7 @@ const PRECACHE_ASSETS = [
     '/static/css/pico.min.css',
     '/static/js/alpine.min.js',
     '/static/js/app.js',
+    '/static/js/chart.min.js',
     '/static/icons/icon-192x192.png',
     '/static/icons/icon-512x512.png',
     '/static/icons/apple-touch-icon.png',

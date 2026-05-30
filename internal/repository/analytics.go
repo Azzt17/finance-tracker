@@ -34,7 +34,7 @@ func (r *AnalyticsRepository) GetSpendingByCategory(ctx context.Context, yearMon
 	if err != nil {
 		return model.AnalyticsSpendingByCategory{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var totalSpent int64
 	var breakdown []model.AnalyticsCategorySpending
@@ -98,7 +98,7 @@ func (r *AnalyticsRepository) GetMonthlyTrend(ctx context.Context, months int) (
 	if err != nil {
 		return model.AnalyticsMonthlyTrend{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var data []model.AnalyticsMonthlyTrendData
 	for rows.Next() {
@@ -148,7 +148,7 @@ func (r *AnalyticsRepository) GetDailySpending(ctx context.Context, yearMonth st
 	if err != nil {
 		return model.AnalyticsDailySpending{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var data []model.AnalyticsDailySpendingData
 	for rows.Next() {
