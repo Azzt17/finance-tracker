@@ -49,6 +49,9 @@ func NewRouter(config Config) http.Handler {
 	analytics := NewAnalyticsHandler(repository.NewAnalyticsRepository(config.DB))
 	analytics.RegisterRoutes(mux)
 
+	auth := NewAuthHandler(repository.NewUserRepository(config.DB), repository.NewSessionRepository(config.DB))
+	auth.RegisterRoutes(mux)
+
 	system := &SystemHandler{Config: config}
 	mux.HandleFunc("GET /api/v1/system/backup", system.DownloadBackup)
 
@@ -62,18 +65,18 @@ func NewRouter(config Config) http.Handler {
 	}
 
 	var app http.Handler = mux
-	if config.AuthUsername != "" || config.AuthPassword != "" {
-		app = middleware.BasicAuth(
-			app,
-			config.AuthUsername,
-			config.AuthPassword,
-			"/healthz",
-			"/manifest.json",
-			"/sw.js",
-			"/static/icons/*",
-			"/internal/*",
-		)
-	}
+	app = middleware.Auth(
+		repository.NewSessionRepository(config.DB),
+		repository.NewUserRepository(config.DB),
+		config.AuthUsername,
+		config.AuthPassword,
+		"/healthz",
+		"/manifest.json",
+		"/sw.js",
+		"/static/icons/*",
+		"/internal/*",
+		"/api/v1/auth/login",
+	)(app)
 
 	return middleware.Recoverer(middleware.Logger(app))
 }
