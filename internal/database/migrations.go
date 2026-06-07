@@ -22,6 +22,11 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 			name:    "initial_schema",
 			path:    "migrations/000001_initial_schema.up.sql",
 		},
+		{
+			version: 2,
+			name:    "create_auth_tables",
+			path:    "migrations/000002_create_auth_tables.up.sql",
+		},
 	}
 
 	if _, err := db.ExecContext(ctx, `
