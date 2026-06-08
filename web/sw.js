@@ -69,11 +69,14 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
-                    // Jika sukses dari jaringan, simpan salinannya ke cache agar selalu ter-update
-                    return caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
+                    // Jika sukses dari jaringan (200 OK), simpan salinannya ke cache agar selalu ter-update
+                    if (networkResponse && networkResponse.status === 200) {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return networkResponse;
                 })
                 .catch(async () => {
                     // Jika jaringan terputus (offline), ambil data terakhir dari cache

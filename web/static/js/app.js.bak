@@ -139,7 +139,7 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 this.showFeedback("Mulai sinkronisasi...", false);
-                const res = await this.apiFetch('/api/v1/sync/transactions', {
+                const res = await fetch('/api/v1/sync/transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ transactions: sanitizedQueue })
@@ -167,64 +167,6 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        
-        async apiFetch(url, options = {}) {
-            const res = await window.fetch(url, options);
-            if (res.status === 401) {
-                this.currentView = 'login';
-                // Don't throw, just return the 401 response so the caller can handle it or we can let them fail gracefully
-            }
-            return res;
-        },
-
-        async login(username, password) {
-            this.isLoading = true;
-            try {
-                const res = await window.fetch('/api/v1/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                if (res.ok) {
-                    this.showFeedback("✓ Login Berhasil");
-                    this.currentView = 'dashboard';
-                    await this.loadInitialData();
-                } else {
-                    this.showFeedback("❌ Login Gagal", true);
-                }
-            } catch(e) {
-                this.showFeedback("❌ Network Error", true);
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        async logout() {
-            if (!confirm("Keluar dari aplikasi? Data offline Anda akan dihapus demi keamanan.")) return;
-            try {
-                await window.fetch('/api/v1/auth/logout', { method: 'POST' });
-            } catch(e) {
-                console.error(e);
-            }
-            
-            // Clear Service Worker Caches
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                for (const key of keys) {
-                    await caches.delete(key);
-                }
-            }
-            
-            // Clear IndexedDB
-            if (this.db) {
-                this.db.close();
-            }
-            indexedDB.deleteDatabase('finance_db');
-            
-            // Reload page to reset state completely
-            window.location.reload();
-        },
-
         downloadBackup() {
             // Direct user to the backup endpoint which triggers file download
             window.open('/api/v1/system/backup', '_blank');
@@ -249,10 +191,10 @@ document.addEventListener('alpine:init', () => {
             try {
                 const month = this.currentMonth;
                 const [cats, budg, sav, txs] = await Promise.all([
-                    this.apiFetch('/api/v1/categories').then(r => r.ok ? r.json() : []),
-                    this.apiFetch(`/api/v1/budget/${month}`).then(r => r.ok ? r.json() : { total_budget: 0, total_spent: 0, remaining_balance: 0 }),
-                    this.apiFetch(`/api/v1/savings?year_month=${month}`).then(r => r.ok ? r.json() : []),
-                    this.apiFetch(`/api/v1/transactions?year_month=${month}`).then(r => r.ok ? r.json() : [])
+                    fetch('/api/v1/categories').then(r => r.ok ? r.json() : []),
+                    fetch(`/api/v1/budget/${month}`).then(r => r.ok ? r.json() : { total_budget: 0, total_spent: 0, remaining_balance: 0 }),
+                    fetch(`/api/v1/savings?year_month=${month}`).then(r => r.ok ? r.json() : []),
+                    fetch(`/api/v1/transactions?year_month=${month}`).then(r => r.ok ? r.json() : [])
                 ]);
 
                 const pendingTxs = await this.getSyncQueue();
@@ -301,7 +243,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                const res = await this.apiFetch('/api/v1/transactions', {
+                const res = await fetch('/api/v1/transactions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -332,7 +274,7 @@ document.addEventListener('alpine:init', () => {
             }
 
             try {
-                const res = await this.apiFetch(`/api/v1/transactions/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/v1/transactions/${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     this.showFeedback("✓ Dihapus", false);
                     await this.loadInitialData();
@@ -350,7 +292,7 @@ document.addEventListener('alpine:init', () => {
         async setBudget(amount) {
             if (this.isOffline) return this.showFeedback("❌ Harus online", true);
             try {
-                const res = await this.apiFetch(`/api/v1/budget/${this.currentMonth}`, {
+                const res = await fetch(`/api/v1/budget/${this.currentMonth}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ total_budget: parseInt(amount, 10) })
                 });
@@ -368,26 +310,26 @@ document.addEventListener('alpine:init', () => {
         async addCategory(name, icon, isQuickAdd) {
             if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
             const payload = { name, icon_emoji: icon, is_quick_add: isQuickAdd, sort_order: this.categories.length + 1 };
-            const res = await this.apiFetch('/api/v1/categories', { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch('/api/v1/categories', { method: 'POST', body: JSON.stringify(payload) });
             if(res.ok) { this.showFeedback("✓ Kategori ditambah"); this.loadInitialData(); }
         },
         async deleteCategory(id) {
             if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
             if(!confirm("Hapus kategori ini?")) return;
-            const res = await this.apiFetch(`/api/v1/categories/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/v1/categories/${id}`, { method: 'DELETE' });
             if(res.ok) { this.showFeedback("✓ Dihapus"); this.loadInitialData(); }
         },
         
         async addSavings(name, target) {
             if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
             const payload = { name, target_amount: parseInt(target), current_saved: 0, year_month: this.currentMonth, is_achieved: false };
-            const res = await this.apiFetch('/api/v1/savings', { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch('/api/v1/savings', { method: 'POST', body: JSON.stringify(payload) });
             if(res.ok) { this.showFeedback("✓ Tabungan ditambah"); this.loadInitialData(); }
         },
         async deleteSavings(id) {
             if(this.isOffline) return this.showFeedback("Hanya bisa saat online", true);
             if(!confirm("Hapus target tabungan?")) return;
-            const res = await this.apiFetch(`/api/v1/savings/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/v1/savings/${id}`, { method: 'DELETE' });
             if(res.ok) { this.showFeedback("✓ Dihapus"); this.loadInitialData(); }
         },
         
@@ -404,7 +346,7 @@ document.addEventListener('alpine:init', () => {
                 is_achieved: (goal.current_saved + amount) >= goal.target_amount
             };
             
-            const res = await this.apiFetch(`/api/v1/savings/${goal.id}`, { 
+            const res = await fetch(`/api/v1/savings/${goal.id}`, { 
                 method: 'PATCH', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload) 
@@ -437,7 +379,7 @@ document.addEventListener('alpine:init', () => {
                 is_achieved: false
             };
             
-            const res = await this.apiFetch(`/api/v1/savings/${goal.id}`, { 
+            const res = await fetch(`/api/v1/savings/${goal.id}`, { 
                 method: 'PATCH', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload) 
@@ -466,7 +408,7 @@ document.addEventListener('alpine:init', () => {
             this.isOffline = status;
             if (!status && this.pendingSync > 0) {
                 try {
-                    await this.apiFetch('/healthz', { method: 'GET' });
+                    await fetch('/healthz', { method: 'GET' });
                     this.syncTransactions();
                 } catch (err) {
                     return; // Masih belum ada koneksi nyata
@@ -482,9 +424,9 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.isLoading = true;
                 const [categoryRes, trendRes, dailyRes] = await Promise.all([
-                    this.apiFetch(`/api/v1/analytics/spending-by-category?year_month=${this.analyticsMonth}`),
-                    this.apiFetch(`/api/v1/analytics/monthly-trend`),
-                    this.apiFetch(`/api/v1/analytics/daily-spending?year_month=${this.analyticsMonth}`)
+                    fetch(`/api/v1/analytics/spending-by-category?year_month=${this.analyticsMonth}`),
+                    fetch(`/api/v1/analytics/monthly-trend`),
+                    fetch(`/api/v1/analytics/daily-spending?year_month=${this.analyticsMonth}`)
                 ]);
 
                 const categoryData = categoryRes.ok ? await categoryRes.json() : null;
