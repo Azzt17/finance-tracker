@@ -54,7 +54,7 @@ func NewRouter(config Config) http.Handler {
 	auth.RegisterRoutes(mux)
 
 	system := &SystemHandler{Config: config}
-	
+
 	// Apply RequireRole middleware for admin endpoints
 	requireAdmin := middleware.RequireRole(model.RoleAdmin)
 
