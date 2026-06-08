@@ -26,7 +26,7 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 	}
 
 	// Create
-	created, err := repo.Create(ctx, input)
+	created, err := repo.Create(ctx, 1, input)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -35,7 +35,7 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 	}
 
 	// List
-	goals, err := repo.List(ctx, yearMonth)
+	goals, err := repo.List(ctx, 1, yearMonth)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -45,7 +45,7 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 
 	// Update
 	input.CurrentSaved = 500000
-	updated, err := repo.Update(ctx, created.ID, input)
+	updated, err := repo.Update(ctx, 1, created.ID, input)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -54,12 +54,12 @@ func TestSavingsRepository_CRUD(t *testing.T) {
 	}
 
 	// Delete
-	err = repo.Delete(ctx, created.ID)
+	err = repo.Delete(ctx, 1, created.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	goals, _ = repo.List(ctx, yearMonth)
+	goals, _ = repo.List(ctx, 1, yearMonth)
 	if len(goals) != 0 {
 		t.Errorf("expected 0 goal after delete, got %d", len(goals))
 	}
@@ -72,7 +72,7 @@ func TestSavingsRepository_UpdateNotFound(t *testing.T) {
 	repo := repository.NewSavingsRepository(db)
 	ctx := context.Background()
 
-	_, err := repo.Update(ctx, 999, model.SavingsGoalInput{
+	_, err := repo.Update(ctx, 1, 999, model.SavingsGoalInput{
 		Name:         "Missing",
 		TargetAmount: 1000000,
 		CurrentSaved: 100000,

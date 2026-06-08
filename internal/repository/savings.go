@@ -15,13 +15,13 @@ func NewSavingsRepository(db *sql.DB) *SavingsRepository {
 	return &SavingsRepository{db: db}
 }
 
-func (r *SavingsRepository) List(ctx context.Context, yearMonth string) ([]model.SavingsGoal, error) {
+func (r *SavingsRepository) List(ctx context.Context, userID int64, yearMonth string) ([]model.SavingsGoal, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, name, target_amount, current_saved, year_month, is_achieved, created_at
 		FROM savings_goals
-		WHERE year_month = ?
+		WHERE year_month = ? AND user_id = ?
 		ORDER BY id DESC
-	`, yearMonth)
+	`, yearMonth, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +45,11 @@ func (r *SavingsRepository) List(ctx context.Context, yearMonth string) ([]model
 	return goals, nil
 }
 
-func (r *SavingsRepository) Create(ctx context.Context, input model.SavingsGoalInput) (model.SavingsGoal, error) {
+func (r *SavingsRepository) Create(ctx context.Context, userID int64, input model.SavingsGoalInput) (model.SavingsGoal, error) {
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO savings_goals (name, target_amount, current_saved, year_month, is_achieved)
-		VALUES (?, ?, ?, ?, ?)
-	`, input.Name, input.TargetAmount, input.CurrentSaved, input.YearMonth, boolToInt(input.IsAchieved))
+		INSERT INTO savings_goals (user_id, name, target_amount, current_saved, year_month, is_achieved)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, userID, input.Name, input.TargetAmount, input.CurrentSaved, input.YearMonth, boolToInt(input.IsAchieved))
 	if err != nil {
 		return model.SavingsGoal{}, err
 	}
@@ -69,12 +69,12 @@ func (r *SavingsRepository) Create(ctx context.Context, input model.SavingsGoalI
 	}, nil
 }
 
-func (r *SavingsRepository) Update(ctx context.Context, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error) {
+func (r *SavingsRepository) Update(ctx context.Context, userID int64, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error) {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE savings_goals
 		SET name = ?, target_amount = ?, current_saved = ?, year_month = ?, is_achieved = ?
-		WHERE id = ?
-	`, input.Name, input.TargetAmount, input.CurrentSaved, input.YearMonth, boolToInt(input.IsAchieved), id)
+		WHERE id = ? AND user_id = ?
+	`, input.Name, input.TargetAmount, input.CurrentSaved, input.YearMonth, boolToInt(input.IsAchieved), id, userID)
 	if err != nil {
 		return model.SavingsGoal{}, err
 	}
@@ -96,8 +96,8 @@ func (r *SavingsRepository) Update(ctx context.Context, id int64, input model.Sa
 	}, nil
 }
 
-func (r *SavingsRepository) Delete(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM savings_goals WHERE id = ?`, id)
+func (r *SavingsRepository) Delete(ctx context.Context, userID int64, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM savings_goals WHERE id = ? AND user_id = ?`, id, userID)
 	if err != nil {
 		return err
 	}

@@ -4,14 +4,15 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type CategoryRepository interface {
-	List(ctx context.Context) ([]model.Category, error)
-	Create(ctx context.Context, input model.CategoryInput) (model.Category, error)
-	Update(ctx context.Context, id int64, input model.CategoryInput) (model.Category, error)
-	Delete(ctx context.Context, id int64) error
+	List(ctx context.Context, userID int64) ([]model.Category, error)
+	Create(ctx context.Context, userID int64, input model.CategoryInput) (model.Category, error)
+	Update(ctx context.Context, userID int64, id int64, input model.CategoryInput) (model.Category, error)
+	Delete(ctx context.Context, userID int64, id int64) error
 }
 
 type CategoryHandler struct {
@@ -30,7 +31,8 @@ func (h *CategoryHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *CategoryHandler) list(w http.ResponseWriter, r *http.Request) {
-	categories, err := h.repository.List(r.Context())
+	userID := middleware.UserFromContext(r.Context()).ID
+	categories, err := h.repository.List(r.Context(), userID)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -54,7 +56,8 @@ func (h *CategoryHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.repository.Create(r.Context(), input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	category, err := h.repository.Create(r.Context(), userID, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -76,7 +79,8 @@ func (h *CategoryHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.repository.Update(r.Context(), id, input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	category, err := h.repository.Update(r.Context(), userID, id, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -91,7 +95,8 @@ func (h *CategoryHandler) delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid category id", "VALIDATION_ERROR")
 		return
 	}
-	if err := h.repository.Delete(r.Context(), id); err != nil {
+	userID := middleware.UserFromContext(r.Context()).ID
+	if err := h.repository.Delete(r.Context(), userID, id); err != nil {
 		writeRepositoryError(w, err)
 		return
 	}

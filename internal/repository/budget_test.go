@@ -17,19 +17,19 @@ func TestBudgetRepository_CRUD(t *testing.T) {
 	yearMonth := "2026-05"
 
 	// Set Budget
-	err := repo.SetTotalBudget(ctx, yearMonth, 5000000)
+	err := repo.SetTotalBudget(ctx, 1, yearMonth, 5000000)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Update Budget
-	err = repo.SetTotalBudget(ctx, yearMonth, 6000000)
+	err = repo.SetTotalBudget(ctx, 1, yearMonth, 6000000)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Get Aggregation
-	agg, err := repo.GetAggregation(ctx, yearMonth)
+	agg, err := repo.GetAggregation(ctx, 1, yearMonth)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

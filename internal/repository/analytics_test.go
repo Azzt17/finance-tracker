@@ -17,8 +17,8 @@ func TestAnalyticsRepository_GetSpendingByCategory(t *testing.T) {
 	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
-		CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT, icon_emoji TEXT);
-		CREATE TABLE transactions (id INTEGER PRIMARY KEY, category_id INTEGER, amount INTEGER, transacted_at DATETIME);
+		CREATE TABLE categories (id INTEGER PRIMARY KEY, user_id INTEGER DEFAULT 1, name TEXT, icon_emoji TEXT);
+		CREATE TABLE transactions (id INTEGER PRIMARY KEY, user_id INTEGER DEFAULT 1, category_id INTEGER, amount INTEGER, transacted_at DATETIME);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create tables: %v", err)
@@ -27,7 +27,7 @@ func TestAnalyticsRepository_GetSpendingByCategory(t *testing.T) {
 	repo := repository.NewAnalyticsRepository(db)
 	ctx := context.Background()
 
-	res, err := repo.GetSpendingByCategory(ctx, "2026-05")
+	res, err := repo.GetSpendingByCategory(ctx, 1, "2026-05")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestAnalyticsRepository_GetSpendingByCategory(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (NULL, 50, '2026-05-02 10:00:00')`)
 	_, _ = db.Exec(`INSERT INTO transactions (category_id, amount, transacted_at) VALUES (1, -20, '2026-05-03 10:00:00')`)
 
-	res, err = repo.GetSpendingByCategory(ctx, "2026-05")
+	res, err = repo.GetSpendingByCategory(ctx, 1, "2026-05")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -60,8 +60,8 @@ func TestAnalyticsRepository_GetMonthlyTrend(t *testing.T) {
 	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
-		CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount INTEGER, transacted_at DATETIME);
-		CREATE TABLE budget_allocation (id INTEGER PRIMARY KEY, year_month TEXT, total_budget INTEGER);
+		CREATE TABLE transactions (id INTEGER PRIMARY KEY, user_id INTEGER DEFAULT 1, amount INTEGER, transacted_at DATETIME);
+		CREATE TABLE budget_allocation (id INTEGER PRIMARY KEY, user_id INTEGER DEFAULT 1, year_month TEXT, total_budget INTEGER);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create tables: %v", err)
@@ -70,7 +70,7 @@ func TestAnalyticsRepository_GetMonthlyTrend(t *testing.T) {
 	repo := repository.NewAnalyticsRepository(db)
 	ctx := context.Background()
 
-	res, err := repo.GetMonthlyTrend(ctx, 3)
+	res, err := repo.GetMonthlyTrend(ctx, 1, 3)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestAnalyticsRepository_GetDailySpending(t *testing.T) {
 	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(`
-		CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount INTEGER, transacted_at DATETIME);
+		CREATE TABLE transactions (id INTEGER PRIMARY KEY, user_id INTEGER DEFAULT 1, amount INTEGER, transacted_at DATETIME);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create tables: %v", err)
@@ -96,7 +96,7 @@ func TestAnalyticsRepository_GetDailySpending(t *testing.T) {
 	repo := repository.NewAnalyticsRepository(db)
 	ctx := context.Background()
 
-	res, err := repo.GetDailySpending(ctx, "2026-05")
+	res, err := repo.GetDailySpending(ctx, 1, "2026-05")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestAnalyticsRepository_GetDailySpending(t *testing.T) {
 		t.Errorf("expected 31 days, got %d", len(res.Data))
 	}
 
-	_, err = repo.GetDailySpending(ctx, "invalid")
+	_, err = repo.GetDailySpending(ctx, 1, "invalid")
 	if err == nil {
 		t.Errorf("expected error on invalid format")
 	}

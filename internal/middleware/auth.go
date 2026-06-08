@@ -23,6 +23,11 @@ func UserFromContext(ctx context.Context) *model.User {
 	return u
 }
 
+// ContextWithUser injects a user into the context, primarily for testing.
+func ContextWithUser(ctx context.Context, u *model.User) context.Context {
+	return context.WithValue(ctx, userContextKey, u)
+}
+
 func matchPathAuth(pattern, path string) bool {
 	if strings.HasSuffix(pattern, "/*") {
 		prefix := strings.TrimSuffix(pattern, "/*")

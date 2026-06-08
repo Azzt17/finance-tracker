@@ -35,7 +35,7 @@ func TestCategoryRepository_CreateAndList(t *testing.T) {
 		SortOrder:  1,
 	}
 
-	created, err := repo.Create(ctx, input)
+	created, err := repo.Create(ctx, 1, input)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -43,7 +43,7 @@ func TestCategoryRepository_CreateAndList(t *testing.T) {
 		t.Errorf("expected name %s, got %s", input.Name, created.Name)
 	}
 
-	categories, err := repo.List(ctx)
+	categories, err := repo.List(ctx, 1)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

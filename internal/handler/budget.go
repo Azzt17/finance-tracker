@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type BudgetRepository interface {
-	GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error)
-	SetTotalBudget(ctx context.Context, yearMonth string, totalBudget int64) error
+	GetAggregation(ctx context.Context, userID int64, yearMonth string) (model.BudgetAggregation, error)
+	SetTotalBudget(ctx context.Context, userID int64, yearMonth string, totalBudget int64) error
 }
 
 type BudgetHandler struct {
@@ -32,7 +33,8 @@ func (h *BudgetHandler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agg, err := h.repository.GetAggregation(r.Context(), yearMonth)
+	userID := middleware.UserFromContext(r.Context()).ID
+	agg, err := h.repository.GetAggregation(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -59,7 +61,8 @@ func (h *BudgetHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repository.SetTotalBudget(r.Context(), yearMonth, input.TotalBudget); err != nil {
+	userID := middleware.UserFromContext(r.Context()).ID
+	if err := h.repository.SetTotalBudget(r.Context(), userID, yearMonth, input.TotalBudget); err != nil {
 		writeRepositoryError(w, err)
 		return
 	}

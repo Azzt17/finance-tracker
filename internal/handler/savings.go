@@ -4,14 +4,15 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type SavingsRepository interface {
-	List(ctx context.Context, yearMonth string) ([]model.SavingsGoal, error)
-	Create(ctx context.Context, input model.SavingsGoalInput) (model.SavingsGoal, error)
-	Update(ctx context.Context, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error)
-	Delete(ctx context.Context, id int64) error
+	List(ctx context.Context, userID int64, yearMonth string) ([]model.SavingsGoal, error)
+	Create(ctx context.Context, userID int64, input model.SavingsGoalInput) (model.SavingsGoal, error)
+	Update(ctx context.Context, userID int64, id int64, input model.SavingsGoalInput) (model.SavingsGoal, error)
+	Delete(ctx context.Context, userID int64, id int64) error
 }
 
 type SavingsGoalHandler struct {
@@ -36,7 +37,8 @@ func (h *SavingsGoalHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goals, err := h.repository.List(r.Context(), yearMonth)
+	userID := middleware.UserFromContext(r.Context()).ID
+	goals, err := h.repository.List(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -68,7 +70,8 @@ func (h *SavingsGoalHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goal, err := h.repository.Create(r.Context(), input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	goal, err := h.repository.Create(r.Context(), userID, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -90,7 +93,8 @@ func (h *SavingsGoalHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	goal, err := h.repository.Update(r.Context(), id, input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	goal, err := h.repository.Update(r.Context(), userID, id, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -105,7 +109,8 @@ func (h *SavingsGoalHandler) delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid savings id", "VALIDATION_ERROR")
 		return
 	}
-	if err := h.repository.Delete(r.Context(), id); err != nil {
+	userID := middleware.UserFromContext(r.Context()).ID
+	if err := h.repository.Delete(r.Context(), userID, id); err != nil {
 		writeRepositoryError(w, err)
 		return
 	}
