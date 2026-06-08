@@ -27,6 +27,11 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 			name:    "create_auth_tables",
 			path:    "migrations/000002_create_auth_tables.up.sql",
 		},
+		{
+			version: 3,
+			name:    "add_user_id_to_tables",
+			path:    "migrations/000003_add_user_id_to_tables.up.sql",
+		},
 	}
 
 	if _, err := db.ExecContext(ctx, `
