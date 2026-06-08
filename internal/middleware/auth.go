@@ -99,3 +99,21 @@ func Auth(
 		})
 	}
 }
+
+// RequireRole enforces that the authenticated user has the specified role.
+// It MUST be placed after the Auth middleware in the chain.
+func RequireRole(role string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user := UserFromContext(r.Context())
+			if user == nil || user.Role != role {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte(`{"error":"forbidden"}`))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
