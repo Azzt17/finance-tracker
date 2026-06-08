@@ -16,7 +16,7 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-func (r *TransactionRepository) List(ctx context.Context, yearMonth string, categoryID *int64, limit, offset int) (transactions []model.Transaction, err error) {
+func (r *TransactionRepository) List(ctx context.Context, userID int64, yearMonth string, categoryID *int64, limit, offset int) (transactions []model.Transaction, err error) {
 	query := `
 		SELECT id,
 			client_transaction_id,
@@ -27,9 +27,9 @@ func (r *TransactionRepository) List(ctx context.Context, yearMonth string, cate
 			created_at,
 			is_synced
 		FROM transactions
-		WHERE strftime('%Y-%m', transacted_at) = ?
+		WHERE strftime('%Y-%m', transacted_at) = ? AND user_id = ?
 	`
-	args := []any{yearMonth}
+	args := []any{yearMonth, userID}
 
 	if categoryID != nil {
 		query += " AND category_id = ?"
@@ -64,9 +64,10 @@ func (r *TransactionRepository) List(ctx context.Context, yearMonth string, cate
 	return transactions, nil
 }
 
-func (r *TransactionRepository) Create(ctx context.Context, input model.TransactionInput) (model.Transaction, error) {
+func (r *TransactionRepository) Create(ctx context.Context, userID int64, input model.TransactionInput) (model.Transaction, error) {
 	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO transactions (
+			user_id,
 			client_transaction_id,
 			amount,
 			category_id,
@@ -74,8 +75,8 @@ func (r *TransactionRepository) Create(ctx context.Context, input model.Transact
 			transacted_at,
 			is_synced
 		)
-		VALUES (?, ?, ?, ?, COALESCE(?, datetime('now')), COALESCE(?, 1))
-	`, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), nullableString(input.Note), dbTime(input.TransactedAt), nullableBoolInt(input.IsSynced))
+		VALUES (?, ?, ?, ?, ?, COALESCE(?, datetime('now')), COALESCE(?, 1))
+	`, userID, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), nullableString(input.Note), dbTime(input.TransactedAt), nullableBoolInt(input.IsSynced))
 	if err != nil {
 		return model.Transaction{}, err
 	}
@@ -85,10 +86,10 @@ func (r *TransactionRepository) Create(ctx context.Context, input model.Transact
 		return model.Transaction{}, err
 	}
 
-	return r.Get(ctx, id)
+	return r.Get(ctx, userID, id)
 }
 
-func (r *TransactionRepository) Get(ctx context.Context, id int64) (model.Transaction, error) {
+func (r *TransactionRepository) Get(ctx context.Context, userID int64, id int64) (model.Transaction, error) {
 	transaction, err := scanTransaction(r.db.QueryRowContext(ctx, `
 		SELECT id,
 			client_transaction_id,
@@ -99,8 +100,8 @@ func (r *TransactionRepository) Get(ctx context.Context, id int64) (model.Transa
 			created_at,
 			is_synced
 		FROM transactions
-		WHERE id = ?
-	`, id))
+		WHERE id = ? AND user_id = ?
+	`, id, userID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Transaction{}, ErrNotFound
 	}
@@ -111,7 +112,7 @@ func (r *TransactionRepository) Get(ctx context.Context, id int64) (model.Transa
 	return transaction, nil
 }
 
-func (r *TransactionRepository) Update(ctx context.Context, id int64, input model.TransactionInput) (model.Transaction, error) {
+func (r *TransactionRepository) Update(ctx context.Context, userID int64, id int64, input model.TransactionInput) (model.Transaction, error) {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE transactions
 		SET client_transaction_id = ?,
@@ -120,8 +121,8 @@ func (r *TransactionRepository) Update(ctx context.Context, id int64, input mode
 			note = ?,
 			transacted_at = COALESCE(?, transacted_at),
 			is_synced = COALESCE(?, is_synced)
-		WHERE id = ?
-	`, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), nullableString(input.Note), dbTime(input.TransactedAt), nullableBoolInt(input.IsSynced), id)
+		WHERE id = ? AND user_id = ?
+	`, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), nullableString(input.Note), dbTime(input.TransactedAt), nullableBoolInt(input.IsSynced), id, userID)
 	if err != nil {
 		return model.Transaction{}, err
 	}
@@ -134,11 +135,11 @@ func (r *TransactionRepository) Update(ctx context.Context, id int64, input mode
 		return model.Transaction{}, ErrNotFound
 	}
 
-	return r.Get(ctx, id)
+	return r.Get(ctx, userID, id)
 }
 
-func (r *TransactionRepository) Delete(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM transactions WHERE id = ?`, id)
+func (r *TransactionRepository) Delete(ctx context.Context, userID int64, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM transactions WHERE id = ? AND user_id = ?`, id, userID)
 	if err != nil {
 		return err
 	}

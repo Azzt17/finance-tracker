@@ -24,7 +24,7 @@ func TestTransactionRepository_CRUD(t *testing.T) {
 	}
 
 	// Create
-	created, err := repo.Create(ctx, input)
+	created, err := repo.Create(ctx, 1, input)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -33,17 +33,17 @@ func TestTransactionRepository_CRUD(t *testing.T) {
 	}
 
 	// Get
-	fetched, err := repo.Get(ctx, created.ID)
+	retrieved, err := repo.Get(ctx, 1, created.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if fetched.ClientTransactionID != input.ClientTransactionID {
-		t.Errorf("expected client id %s, got %s", input.ClientTransactionID, fetched.ClientTransactionID)
+	if retrieved.ClientTransactionID != input.ClientTransactionID {
+		t.Errorf("expected client id %s, got %s", input.ClientTransactionID, retrieved.ClientTransactionID)
 	}
 
 	// List
 	yearMonth := time.Now().Format("2006-01")
-	txs, err := repo.List(ctx, yearMonth, nil, 100, 0)
+	txs, err := repo.List(ctx, 1, yearMonth, nil, 100, 0)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -53,7 +53,7 @@ func TestTransactionRepository_CRUD(t *testing.T) {
 
 	// Update
 	input.Amount = 60000
-	updated, err := repo.Update(ctx, created.ID, input)
+	updated, err := repo.Update(ctx, 1, created.ID, input)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -62,12 +62,12 @@ func TestTransactionRepository_CRUD(t *testing.T) {
 	}
 
 	// Delete
-	err = repo.Delete(ctx, created.ID)
+	err = repo.Delete(ctx, 1, created.ID)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	txs, _ = repo.List(ctx, yearMonth, nil, 100, 0)
+	txs, _ = repo.List(ctx, 1, yearMonth, nil, 100, 0)
 	if len(txs) != 0 {
 		t.Errorf("expected 0 tx after delete, got %d", len(txs))
 	}

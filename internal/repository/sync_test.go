@@ -31,14 +31,14 @@ func TestSyncRepository_SyncTransactions(t *testing.T) {
 		},
 	}
 
-	_, err := repo.SyncTransactions(ctx, inputs)
+	_, err := repo.SyncTransactions(ctx, 1, inputs)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Verify they are inserted
 	txRepo := repository.NewTransactionRepository(db)
-	txs, err := txRepo.List(ctx, time.Now().Format("2006-01"), nil, 100, 0)
+	txs, err := txRepo.List(ctx, 1, time.Now().Format("2006-01"), nil, 100, 0)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

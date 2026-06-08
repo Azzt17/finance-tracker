@@ -16,7 +16,7 @@ func NewSyncRepository(db *sql.DB) *SyncRepository {
 	return &SyncRepository{db: db}
 }
 
-func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.TransactionInput) ([]model.Transaction, error) {
+func (r *SyncRepository) SyncTransactions(ctx context.Context, userID int64, inputs []model.TransactionInput) ([]model.Transaction, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.Tr
 	for _, input := range inputs {
 		var exists bool
 		var id int64
-		err := tx.QueryRowContext(ctx, "SELECT id FROM transactions WHERE client_transaction_id = ?", input.ClientTransactionID).Scan(&id)
+		err := tx.QueryRowContext(ctx, "SELECT id FROM transactions WHERE client_transaction_id = ? AND user_id = ?", input.ClientTransactionID, userID).Scan(&id)
 		if err == nil {
 			exists = true
 		} else if err != sql.ErrNoRows {
@@ -37,7 +37,7 @@ func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.Tr
 
 		if input.IsDeleted != nil && *input.IsDeleted {
 			if exists {
-				_, err = tx.ExecContext(ctx, "DELETE FROM transactions WHERE id = ?", id)
+				_, err = tx.ExecContext(ctx, "DELETE FROM transactions WHERE id = ? AND user_id = ?", id, userID)
 				if err != nil {
 					slog.Error("sync delete failed", "error", err)
 				}
@@ -49,17 +49,17 @@ func (r *SyncRepository) SyncTransactions(ctx context.Context, inputs []model.Tr
 			_, err = tx.ExecContext(ctx, `
 				UPDATE transactions
 				SET amount = ?, category_id = ?, note = ?, transacted_at = COALESCE(?, transacted_at), is_synced = 1
-				WHERE id = ?
-			`, input.Amount, nullableInt64(input.CategoryID), input.Note, dbTime(input.TransactedAt), id)
+				WHERE id = ? AND user_id = ?
+			`, input.Amount, nullableInt64(input.CategoryID), input.Note, dbTime(input.TransactedAt), id, userID)
 			if err != nil {
 				slog.Error("sync update failed", "error", err)
 				continue
 			}
 		} else {
 			res, err := tx.ExecContext(ctx, `
-				INSERT INTO transactions (client_transaction_id, amount, category_id, note, transacted_at, is_synced)
-				VALUES (?, ?, ?, ?, COALESCE(?, datetime('now')), 1)
-			`, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), input.Note, dbTime(input.TransactedAt))
+				INSERT INTO transactions (user_id, client_transaction_id, amount, category_id, note, transacted_at, is_synced)
+				VALUES (?, ?, ?, ?, ?, COALESCE(?, datetime('now')), 1)
+			`, userID, input.ClientTransactionID, input.Amount, nullableInt64(input.CategoryID), input.Note, dbTime(input.TransactedAt))
 			if err != nil {
 				slog.Error("sync insert failed", "error", err)
 				continue

@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type ExportRepository interface {
-	GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error)
-	ListTransactions(ctx context.Context, yearMonth string) ([]model.Transaction, error)
+	GetAggregation(ctx context.Context, userID int64, yearMonth string) (model.BudgetAggregation, error)
+	ListTransactions(ctx context.Context, userID int64, yearMonth string) ([]model.Transaction, error)
 }
 
 type ExportHandler struct {
@@ -33,13 +34,14 @@ func (h *ExportHandler) exportMarkdown(w http.ResponseWriter, r *http.Request) {
 		yearMonth = time.Now().Format("2006-01") // Default to current month
 	}
 
-	agg, err := h.repository.GetAggregation(r.Context(), yearMonth)
+	userID := middleware.UserFromContext(r.Context()).ID
+	agg, err := h.repository.GetAggregation(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
 	}
 
-	transactions, err := h.repository.ListTransactions(r.Context(), yearMonth)
+	transactions, err := h.repository.ListTransactions(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return

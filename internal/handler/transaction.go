@@ -5,15 +5,16 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type TransactionRepository interface {
-	List(ctx context.Context, yearMonth string, categoryID *int64, limit, offset int) ([]model.Transaction, error)
-	Create(ctx context.Context, input model.TransactionInput) (model.Transaction, error)
-	Get(ctx context.Context, id int64) (model.Transaction, error)
-	Update(ctx context.Context, id int64, input model.TransactionInput) (model.Transaction, error)
-	Delete(ctx context.Context, id int64) error
+	List(ctx context.Context, userID int64, yearMonth string, categoryID *int64, limit, offset int) ([]model.Transaction, error)
+	Create(ctx context.Context, userID int64, input model.TransactionInput) (model.Transaction, error)
+	Get(ctx context.Context, userID int64, id int64) (model.Transaction, error)
+	Update(ctx context.Context, userID int64, id int64, input model.TransactionInput) (model.Transaction, error)
+	Delete(ctx context.Context, userID int64, id int64) error
 }
 
 type TransactionHandler struct {
@@ -62,7 +63,8 @@ func (h *TransactionHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	transactions, err := h.repository.List(r.Context(), yearMonth, categoryID, limit, offset)
+	userID := middleware.UserFromContext(r.Context()).ID
+	transactions, err := h.repository.List(r.Context(), userID, yearMonth, categoryID, limit, offset)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -90,7 +92,8 @@ func (h *TransactionHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaction, err := h.repository.Create(r.Context(), input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	transaction, err := h.repository.Create(r.Context(), userID, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -112,7 +115,8 @@ func (h *TransactionHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaction, err := h.repository.Update(r.Context(), id, input)
+	userID := middleware.UserFromContext(r.Context()).ID
+	transaction, err := h.repository.Update(r.Context(), userID, id, input)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return
@@ -127,7 +131,8 @@ func (h *TransactionHandler) delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid transaction id", "VALIDATION_ERROR")
 		return
 	}
-	if err := h.repository.Delete(r.Context(), id); err != nil {
+	userID := middleware.UserFromContext(r.Context()).ID
+	if err := h.repository.Delete(r.Context(), userID, id); err != nil {
 		writeRepositoryError(w, err)
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/repository"
 )
 
@@ -29,7 +30,8 @@ func (h *AnalyticsHandler) GetSpendingByCategory(w http.ResponseWriter, r *http.
 		return
 	}
 
-	data, err := h.repo.GetSpendingByCategory(r.Context(), yearMonth)
+	userID := middleware.UserFromContext(r.Context()).ID
+	data, err := h.repo.GetSpendingByCategory(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -47,7 +49,8 @@ func (h *AnalyticsHandler) GetMonthlyTrend(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	data, err := h.repo.GetMonthlyTrend(r.Context(), months)
+	userID := middleware.UserFromContext(r.Context()).ID
+	data, err := h.repo.GetMonthlyTrend(r.Context(), userID, months)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -63,7 +66,8 @@ func (h *AnalyticsHandler) GetDailySpending(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	data, err := h.repo.GetDailySpending(r.Context(), yearMonth)
+	userID := middleware.UserFromContext(r.Context()).ID
+	data, err := h.repo.GetDailySpending(r.Context(), userID, yearMonth)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return

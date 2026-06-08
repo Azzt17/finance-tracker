@@ -17,7 +17,7 @@ func NewAnalyticsRepository(db *sql.DB) *AnalyticsRepository {
 	return &AnalyticsRepository{db: db}
 }
 
-func (r *AnalyticsRepository) GetSpendingByCategory(ctx context.Context, yearMonth string) (model.AnalyticsSpendingByCategory, error) {
+func (r *AnalyticsRepository) GetSpendingByCategory(ctx context.Context, userID int64, yearMonth string) (model.AnalyticsSpendingByCategory, error) {
 	query := `
 		SELECT 
 			COALESCE(t.category_id, 0) as category_id,
@@ -26,11 +26,11 @@ func (r *AnalyticsRepository) GetSpendingByCategory(ctx context.Context, yearMon
 			SUM(t.amount) as total
 		FROM transactions t
 		LEFT JOIN categories c ON t.category_id = c.id
-		WHERE strftime('%Y-%m', t.transacted_at) = ? AND t.amount > 0
+		WHERE strftime('%Y-%m', t.transacted_at) = ? AND t.amount > 0 AND t.user_id = ?
 		GROUP BY COALESCE(t.category_id, 0)
 		ORDER BY total DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query, yearMonth)
+	rows, err := r.db.QueryContext(ctx, query, yearMonth, userID)
 	if err != nil {
 		return model.AnalyticsSpendingByCategory{}, err
 	}
@@ -68,7 +68,7 @@ func (r *AnalyticsRepository) GetSpendingByCategory(ctx context.Context, yearMon
 	}, nil
 }
 
-func (r *AnalyticsRepository) GetMonthlyTrend(ctx context.Context, months int) (model.AnalyticsMonthlyTrend, error) {
+func (r *AnalyticsRepository) GetMonthlyTrend(ctx context.Context, userID int64, months int) (model.AnalyticsMonthlyTrend, error) {
 	if months <= 0 {
 		months = 6
 	}
@@ -89,12 +89,12 @@ func (r *AnalyticsRepository) GetMonthlyTrend(ctx context.Context, months int) (
 			COALESCE(SUM(t.amount), 0) as total_spent,
 			COALESCE(b.total_budget, 0) as total_budget
 		FROM months_cte m
-		LEFT JOIN transactions t ON strftime('%Y-%m', t.transacted_at) = m.ym AND t.amount > 0
-		LEFT JOIN budget_allocation b ON b.year_month = m.ym
+		LEFT JOIN transactions t ON strftime('%Y-%m', t.transacted_at) = m.ym AND t.amount > 0 AND t.user_id = ?
+		LEFT JOIN budget_allocation b ON b.year_month = m.ym AND b.user_id = ?
 		GROUP BY m.ym
 		ORDER BY m.ym ASC
 	`
-	rows, err := r.db.QueryContext(ctx, query, months)
+	rows, err := r.db.QueryContext(ctx, query, months, userID, userID)
 	if err != nil {
 		return model.AnalyticsMonthlyTrend{}, err
 	}
@@ -122,7 +122,7 @@ func (r *AnalyticsRepository) GetMonthlyTrend(ctx context.Context, months int) (
 	}, nil
 }
 
-func (r *AnalyticsRepository) GetDailySpending(ctx context.Context, yearMonth string) (model.AnalyticsDailySpending, error) {
+func (r *AnalyticsRepository) GetDailySpending(ctx context.Context, userID int64, yearMonth string) (model.AnalyticsDailySpending, error) {
 	_, err := time.Parse("2006-01", yearMonth)
 	if err != nil {
 		return model.AnalyticsDailySpending{}, fmt.Errorf("invalid year_month format: %v", err)
@@ -140,11 +140,11 @@ func (r *AnalyticsRepository) GetDailySpending(ctx context.Context, yearMonth st
 			d.d as date,
 			COALESCE(SUM(t.amount), 0) as total
 		FROM dates_cte d
-		LEFT JOIN transactions t ON strftime('%Y-%m-%d', t.transacted_at) = d.d AND t.amount > 0
+		LEFT JOIN transactions t ON strftime('%Y-%m-%d', t.transacted_at) = d.d AND t.amount > 0 AND t.user_id = ?
 		GROUP BY d.d
 		ORDER BY d.d ASC
 	`
-	rows, err := r.db.QueryContext(ctx, query, yearMonth)
+	rows, err := r.db.QueryContext(ctx, query, yearMonth, userID)
 	if err != nil {
 		return model.AnalyticsDailySpending{}, err
 	}

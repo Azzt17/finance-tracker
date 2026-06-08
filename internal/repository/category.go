@@ -16,12 +16,13 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
-func (r *CategoryRepository) List(ctx context.Context) (categories []model.Category, err error) {
+func (r *CategoryRepository) List(ctx context.Context, userID int64) (categories []model.Category, err error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, name, icon_emoji, is_quick_add, sort_order, created_at
 		FROM categories
+		WHERE user_id = ?
 		ORDER BY sort_order ASC, name ASC, id ASC
-	`)
+	`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +47,11 @@ func (r *CategoryRepository) List(ctx context.Context) (categories []model.Categ
 	return categories, nil
 }
 
-func (r *CategoryRepository) Create(ctx context.Context, input model.CategoryInput) (model.Category, error) {
+func (r *CategoryRepository) Create(ctx context.Context, userID int64, input model.CategoryInput) (model.Category, error) {
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO categories (name, icon_emoji, is_quick_add, sort_order)
-		VALUES (?, ?, ?, ?)
-	`, input.Name, nullableString(input.IconEmoji), boolToInt(input.IsQuickAdd), input.SortOrder)
+		INSERT INTO categories (user_id, name, icon_emoji, is_quick_add, sort_order)
+		VALUES (?, ?, ?, ?, ?)
+	`, userID, input.Name, nullableString(input.IconEmoji), boolToInt(input.IsQuickAdd), input.SortOrder)
 	if err != nil {
 		return model.Category{}, err
 	}
@@ -60,15 +61,15 @@ func (r *CategoryRepository) Create(ctx context.Context, input model.CategoryInp
 		return model.Category{}, err
 	}
 
-	return r.Get(ctx, id)
+	return r.Get(ctx, userID, id)
 }
 
-func (r *CategoryRepository) Get(ctx context.Context, id int64) (model.Category, error) {
+func (r *CategoryRepository) Get(ctx context.Context, userID int64, id int64) (model.Category, error) {
 	category, err := scanCategory(r.db.QueryRowContext(ctx, `
 		SELECT id, name, icon_emoji, is_quick_add, sort_order, created_at
 		FROM categories
-		WHERE id = ?
-	`, id))
+		WHERE id = ? AND user_id = ?
+	`, id, userID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Category{}, ErrNotFound
 	}
@@ -79,12 +80,12 @@ func (r *CategoryRepository) Get(ctx context.Context, id int64) (model.Category,
 	return category, nil
 }
 
-func (r *CategoryRepository) Update(ctx context.Context, id int64, input model.CategoryInput) (model.Category, error) {
+func (r *CategoryRepository) Update(ctx context.Context, userID int64, id int64, input model.CategoryInput) (model.Category, error) {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE categories
 		SET name = ?, icon_emoji = ?, is_quick_add = ?, sort_order = ?
-		WHERE id = ?
-	`, input.Name, nullableString(input.IconEmoji), boolToInt(input.IsQuickAdd), input.SortOrder, id)
+		WHERE id = ? AND user_id = ?
+	`, input.Name, nullableString(input.IconEmoji), boolToInt(input.IsQuickAdd), input.SortOrder, id, userID)
 	if err != nil {
 		return model.Category{}, err
 	}
@@ -97,11 +98,11 @@ func (r *CategoryRepository) Update(ctx context.Context, id int64, input model.C
 		return model.Category{}, ErrNotFound
 	}
 
-	return r.Get(ctx, id)
+	return r.Get(ctx, userID, id)
 }
 
-func (r *CategoryRepository) Delete(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM categories WHERE id = ?`, id)
+func (r *CategoryRepository) Delete(ctx context.Context, userID int64, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM categories WHERE id = ? AND user_id = ?`, id, userID)
 	if err != nil {
 		return err
 	}

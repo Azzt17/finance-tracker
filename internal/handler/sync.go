@@ -4,11 +4,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 )
 
 type SyncRepository interface {
-	SyncTransactions(ctx context.Context, transactions []model.TransactionInput) ([]model.Transaction, error)
+	SyncTransactions(ctx context.Context, userID int64, transactions []model.TransactionInput) ([]model.Transaction, error)
 }
 
 type SyncHandler struct {
@@ -40,7 +41,8 @@ func (h *SyncHandler) syncTransactions(w http.ResponseWriter, r *http.Request) {
 
 	// For background sync, the client usually sends offline transactions.
 	// We pass them to repository to perform batch insert/update (upsert by ClientTransactionID).
-	synced, err := h.repository.SyncTransactions(r.Context(), payload.Transactions)
+	userID := middleware.UserFromContext(r.Context()).ID
+	synced, err := h.repository.SyncTransactions(r.Context(), userID, payload.Transactions)
 	if err != nil {
 		writeRepositoryError(w, err)
 		return

@@ -21,10 +21,10 @@ func NewExportRepository(db *sql.DB) *ExportRepository {
 	}
 }
 
-func (r *ExportRepository) GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error) {
-	return r.budget.GetAggregation(ctx, yearMonth)
+func (r *ExportRepository) GetAggregation(ctx context.Context, userID int64, yearMonth string) (model.BudgetAggregation, error) {
+	return r.budget.GetAggregation(ctx, userID, yearMonth)
 }
 
-func (r *ExportRepository) ListTransactions(ctx context.Context, yearMonth string) ([]model.Transaction, error) {
-	return r.tx.List(ctx, yearMonth, nil, 10000, 0)
+func (r *ExportRepository) ListTransactions(ctx context.Context, userID int64, yearMonth string) ([]model.Transaction, error) {
+	return r.tx.List(ctx, userID, yearMonth, nil, 10000, 0)
 }

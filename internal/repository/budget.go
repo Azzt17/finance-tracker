@@ -16,15 +16,15 @@ func NewBudgetRepository(db *sql.DB) *BudgetRepository {
 	return &BudgetRepository{db: db}
 }
 
-func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string) (model.BudgetAggregation, error) {
+func (r *BudgetRepository) GetAggregation(ctx context.Context, userID int64, yearMonth string) (model.BudgetAggregation, error) {
 	var totalBudget int64
-	err := r.db.QueryRowContext(ctx, "SELECT total_budget FROM budget_allocation WHERE year_month = ?", yearMonth).Scan(&totalBudget)
+	err := r.db.QueryRowContext(ctx, "SELECT total_budget FROM budget_allocation WHERE year_month = ? AND user_id = ?", yearMonth, userID).Scan(&totalBudget)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.BudgetAggregation{}, err
 	}
 
 	var totalSpent int64
-	err = r.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE strftime('%Y-%m', transacted_at) = ?", yearMonth).Scan(&totalSpent)
+	err = r.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE strftime('%Y-%m', transacted_at) = ? AND user_id = ?", yearMonth, userID).Scan(&totalSpent)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.BudgetAggregation{}, err
 	}
@@ -33,9 +33,9 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 		SELECT c.id, c.name, SUM(t.amount) as total
 		FROM categories c
 		JOIN transactions t ON c.id = t.category_id
-		WHERE strftime('%Y-%m', t.transacted_at) = ?
+		WHERE strftime('%Y-%m', t.transacted_at) = ? AND t.user_id = ?
 		GROUP BY c.id, c.name
-	`, yearMonth)
+	`, yearMonth, userID)
 	if err != nil {
 		return model.BudgetAggregation{}, err
 	}
@@ -67,16 +67,16 @@ func (r *BudgetRepository) GetAggregation(ctx context.Context, yearMonth string)
 	}, nil
 }
 
-func (r *BudgetRepository) SetTotalBudget(ctx context.Context, yearMonth string, totalBudget int64) error {
+func (r *BudgetRepository) SetTotalBudget(ctx context.Context, userID int64, yearMonth string, totalBudget int64) error {
 	var id int64
-	err := r.db.QueryRowContext(ctx, "SELECT id FROM budget_allocation WHERE year_month = ?", yearMonth).Scan(&id)
+	err := r.db.QueryRowContext(ctx, "SELECT id FROM budget_allocation WHERE year_month = ? AND user_id = ?", yearMonth, userID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		_, err = r.db.ExecContext(ctx, "INSERT INTO budget_allocation (year_month, total_budget) VALUES (?, ?)", yearMonth, totalBudget)
+		_, err = r.db.ExecContext(ctx, "INSERT INTO budget_allocation (user_id, year_month, total_budget) VALUES (?, ?, ?)", userID, yearMonth, totalBudget)
 		return err
 	} else if err != nil {
 		return err
 	}
 
-	_, err = r.db.ExecContext(ctx, "UPDATE budget_allocation SET total_budget = ?, updated_at = datetime('now') WHERE id = ?", totalBudget, id)
+	_, err = r.db.ExecContext(ctx, "UPDATE budget_allocation SET total_budget = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?", totalBudget, id, userID)
 	return err
 }
