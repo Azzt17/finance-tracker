@@ -16,12 +16,16 @@ import (
 type AuthHandler struct {
 	userRepo    repository.UserRepository
 	sessionRepo repository.SessionRepository
+	envUsername string
+	envPassword string
 }
 
-func NewAuthHandler(userRepo repository.UserRepository, sessionRepo repository.SessionRepository) *AuthHandler {
+func NewAuthHandler(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, envUsername, envPassword string) *AuthHandler {
 	return &AuthHandler{
 		userRepo:    userRepo,
 		sessionRepo: sessionRepo,
+		envUsername: envUsername,
+		envPassword: envPassword,
 	}
 }
 
@@ -50,8 +54,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid username or password"})
-		return
+		// Fallback for initial admin setup using .env credentials
+		if req.Username == h.envUsername && req.Password == h.envPassword && h.envUsername != "" && h.envPassword != "" {
+			// Update the database with the new bcrypt hash
+			hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+			if err == nil {
+				_ = h.userRepo.UpdatePassword(r.Context(), user.ID, string(hash))
+			}
+		} else {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid username or password"})
+			return
+		}
 	}
 
 	sessionID := uuid.New().String()
