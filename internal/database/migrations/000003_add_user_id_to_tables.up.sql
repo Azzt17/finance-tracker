@@ -2,7 +2,7 @@
 INSERT OR IGNORE INTO users (id, username, password_hash) 
 VALUES (1, 'admin', 'unset_password_hash_please_change');
 
--- Create new tables with user_id
+-- 1. Create all new tables first
 CREATE TABLE categories_new (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL DEFAULT 1,
@@ -15,14 +15,6 @@ CREATE TABLE categories_new (
 	FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- Copy data
-INSERT INTO categories_new (id, user_id, name, icon_emoji, is_quick_add, sort_order, created_at)
-SELECT id, 1, name, icon_emoji, is_quick_add, sort_order, created_at FROM categories;
-
-DROP TABLE categories;
-ALTER TABLE categories_new RENAME TO categories;
-
--- Budget Allocation
 CREATE TABLE budget_allocation_new (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL DEFAULT 1,
@@ -34,13 +26,6 @@ CREATE TABLE budget_allocation_new (
 	FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-INSERT INTO budget_allocation_new (id, user_id, year_month, total_budget, created_at, updated_at)
-SELECT id, 1, year_month, total_budget, created_at, updated_at FROM budget_allocation;
-
-DROP TABLE budget_allocation;
-ALTER TABLE budget_allocation_new RENAME TO budget_allocation;
-
--- Savings Goals
 CREATE TABLE savings_goals_new (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL DEFAULT 1,
@@ -53,13 +38,6 @@ CREATE TABLE savings_goals_new (
 	FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-INSERT INTO savings_goals_new (id, user_id, name, target_amount, current_saved, year_month, is_achieved, created_at)
-SELECT id, 1, name, target_amount, current_saved, year_month, is_achieved, created_at FROM savings_goals;
-
-DROP TABLE savings_goals;
-ALTER TABLE savings_goals_new RENAME TO savings_goals;
-
--- Transactions
 CREATE TABLE transactions_new (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL DEFAULT 1,
@@ -72,11 +50,30 @@ CREATE TABLE transactions_new (
 	is_synced INTEGER NOT NULL DEFAULT 1,
 	UNIQUE(user_id, client_transaction_id),
 	FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-	FOREIGN KEY (category_id) REFERENCES categories (id) ON UPDATE CASCADE ON DELETE RESTRICT
+	FOREIGN KEY (category_id) REFERENCES categories_new (id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
+-- 2. Copy data
+INSERT INTO categories_new (id, user_id, name, icon_emoji, is_quick_add, sort_order, created_at)
+SELECT id, 1, name, icon_emoji, is_quick_add, sort_order, created_at FROM categories;
+
+INSERT INTO budget_allocation_new (id, user_id, year_month, total_budget, created_at, updated_at)
+SELECT id, 1, year_month, total_budget, created_at, updated_at FROM budget_allocation;
+
+INSERT INTO savings_goals_new (id, user_id, name, target_amount, current_saved, year_month, is_achieved, created_at)
+SELECT id, 1, name, target_amount, current_saved, year_month, is_achieved, created_at FROM savings_goals;
 
 INSERT INTO transactions_new (id, user_id, client_transaction_id, amount, category_id, note, transacted_at, created_at, is_synced)
 SELECT id, 1, client_transaction_id, amount, category_id, note, transacted_at, created_at, is_synced FROM transactions;
 
+-- 3. Drop old tables in reverse dependency order
 DROP TABLE transactions;
+DROP TABLE budget_allocation;
+DROP TABLE savings_goals;
+DROP TABLE categories;
+
+-- 4. Rename new tables
+ALTER TABLE categories_new RENAME TO categories;
+ALTER TABLE budget_allocation_new RENAME TO budget_allocation;
+ALTER TABLE savings_goals_new RENAME TO savings_goals;
 ALTER TABLE transactions_new RENAME TO transactions;
