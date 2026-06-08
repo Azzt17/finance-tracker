@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finance-tracker-v14'; // Ubah angka versi ini setiap kali ada pembaruan kode/UI
+const CACHE_NAME = 'finance-tracker-v15'; // Ubah angka versi ini setiap kali ada pembaruan kode/UI
 
 // Daftar semua aset statis yang perlu di-cache saat proses instalasi PWA
 const PRECACHE_ASSETS = [
