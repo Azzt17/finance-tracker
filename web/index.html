@@ -130,6 +130,25 @@
             </div>
         </header>
 
+        <!-- VIEW: LOGIN -->
+        <div x-cloak x-show="$store.finance.currentView === 'login'" x-data="{ user: '', pass: '' }">
+            <h1 style="text-align: center; margin-top: 2rem;">Login</h1>
+            <p style="text-align: center;" class="text-muted">Silakan masuk ke akun Anda</p>
+            <article style="max-width: 400px; margin: 0 auto; padding: 2rem 1rem;">
+                <label>
+                    Username
+                    <input type="text" x-model="user" placeholder="Masukkan username" @keydown.enter="$store.finance.login(user, pass)">
+                </label>
+                <label style="margin-top: 1rem;">
+                    Password
+                    <input type="password" x-model="pass" placeholder="Masukkan password" @keydown.enter="$store.finance.login(user, pass)">
+                </label>
+                <button style="margin-top: 2rem;" @click="$store.finance.login(user, pass)" :aria-busy="$store.finance.isLoading">
+                    Masuk
+                </button>
+            </article>
+        </div>
+
         <!-- VIEW: INPUT TRANSAKSI -->
         <div x-show="$store.finance.currentView === 'input'" x-data="{ amount: '', note: '', categoryId: '' }">
             <h1 style="text-align: center;">Catat<br>Pengeluaran</h1>
@@ -297,6 +316,17 @@
                 </div>
             </article>
 
+            <article>
+                <header>
+                    <h3 style="margin: 0; color: #ef4444;">Akun</h3>
+                </header>
+                <div>
+                    <button class="outline secondary" style="color: #ef4444; border-color: #ef4444;" @click="$store.finance.logout()">
+                        Keluar (Logout)
+                    </button>
+                </div>
+            </article>
+
         </div>
 
         <!-- VIEW: ANALYTICS -->
@@ -331,7 +361,7 @@
     </main>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" x-show="$store.finance.currentView !== 'login'" x-cloak>
         <button :class="$store.finance.currentView === 'input' ? 'active' : ''" @click="$store.finance.changeView('input')">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             Input
