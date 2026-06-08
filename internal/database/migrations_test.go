@@ -40,6 +40,8 @@ func TestMigrateCreatesInitialSchema(t *testing.T) {
 
 	for _, table := range []string{
 		"schema_migrations",
+		"users",
+		"sessions",
 		"categories",
 		"budget_allocation",
 		"savings_goals",
@@ -47,6 +49,12 @@ func TestMigrateCreatesInitialSchema(t *testing.T) {
 	} {
 		assertTableExists(t, db, table)
 	}
+
+	assertColumn(t, db, "users", "id", "INTEGER", true, nil, true)
+	assertColumn(t, db, "users", "username", "TEXT", true, nil, false)
+	assertColumn(t, db, "users", "password_hash", "TEXT", true, nil, false)
+	assertColumn(t, db, "users", "role", "TEXT", true, strPtr("'user'"), false)
+	assertColumn(t, db, "users", "created_at", "TEXT", true, strPtr("datetime('now')"), false)
 
 	assertColumn(t, db, "categories", "id", "INTEGER", true, nil, true)
 	assertColumn(t, db, "categories", "name", "TEXT", true, nil, false)

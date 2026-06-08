@@ -28,6 +28,9 @@ func TestUserRepository_CRUD(t *testing.T) {
 	if user.Username != "testuser" {
 		t.Errorf("expected username testuser, got %v", user.Username)
 	}
+	if user.Role != model.RoleUser {
+		t.Errorf("expected default role user, got %v", user.Role)
+	}
 
 	// Test GetByUsername
 	foundUser, err := repo.GetByUsername(ctx, "testuser")

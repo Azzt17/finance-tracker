@@ -33,7 +33,7 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 	query := `
 		INSERT INTO users (username, password_hash)
 		VALUES (?, ?)
-		RETURNING id, username, password_hash, created_at
+		RETURNING id, username, password_hash, role, created_at
 	`
 	var user model.User
 	var createdAtStr string
@@ -41,6 +41,7 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
+		&user.Role,
 		&createdAtStr,
 	)
 	if err != nil {
@@ -51,13 +52,14 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 }
 
 func (r *userRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
-	query := `SELECT id, username, password_hash, created_at FROM users WHERE username = ?`
+	query := `SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?`
 	var user model.User
 	var createdAtStr string
 	err := r.db.QueryRowContext(ctx, query, username).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
+		&user.Role,
 		&createdAtStr,
 	)
 	if err != nil {
@@ -71,13 +73,14 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
-	query := `SELECT id, username, password_hash, created_at FROM users WHERE id = ?`
+	query := `SELECT id, username, password_hash, role, created_at FROM users WHERE id = ?`
 	var user model.User
 	var createdAtStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
+		&user.Role,
 		&createdAtStr,
 	)
 	if err != nil {

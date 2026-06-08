@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Azzt17/finance-tracker/internal/middleware"
+	"github.com/Azzt17/finance-tracker/internal/model"
 	"github.com/Azzt17/finance-tracker/internal/repository"
 )
 
@@ -53,12 +54,16 @@ func NewRouter(config Config) http.Handler {
 	auth.RegisterRoutes(mux)
 
 	system := &SystemHandler{Config: config}
-	mux.HandleFunc("GET /api/v1/system/backup", system.DownloadBackup)
+
+	// Apply RequireRole middleware for admin endpoints
+	requireAdmin := middleware.RequireRole(model.RoleAdmin)
+
+	mux.Handle("GET /api/v1/system/backup", requireAdmin(http.HandlerFunc(system.DownloadBackup)))
 
 	// Internal endpoint (protected by localhost check)
-	mux.HandleFunc("POST /internal/backup", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("POST /internal/backup", requireAdmin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		system.TriggerBackup(w, r)
-	})
+	})))
 
 	if config.StaticFS != nil {
 		mux.Handle("GET /", http.FileServer(http.FS(config.StaticFS)))
