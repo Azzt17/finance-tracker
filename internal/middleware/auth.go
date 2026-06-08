@@ -75,7 +75,16 @@ func Auth(
 			if basicUsername != "" && basicPassword != "" {
 				username, pass, ok := r.BasicAuth()
 				if ok && subtle.ConstantTimeCompare([]byte(username), []byte(basicUsername)) == 1 && subtle.ConstantTimeCompare([]byte(pass), []byte(basicPassword)) == 1 {
-					next.ServeHTTP(w, r)
+					// Legacy fallback sets user to the default admin (ID 1)
+					u, err := userRepo.GetByID(r.Context(), 1)
+					if err == nil {
+						user = u
+					} else {
+						// Create an empty user with ID 1 so context won't be nil
+						user = &model.User{ID: 1, Username: "admin"}
+					}
+					ctx := context.WithValue(r.Context(), userContextKey, user)
+					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
 			}
