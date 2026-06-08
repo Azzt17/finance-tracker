@@ -14,10 +14,10 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo     repository.UserRepository
-	sessionRepo  repository.SessionRepository
-	envUsername  string
-	envPassword  string
+	userRepo    repository.UserRepository
+	sessionRepo repository.SessionRepository
+	envUsername string
+	envPassword string
 }
 
 func NewAuthHandler(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, envUsername, envPassword string) *AuthHandler {
