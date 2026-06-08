@@ -37,7 +37,7 @@ func TestAuthHandler_Login(t *testing.T) {
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	_, _ = userRepo.Create(context.Background(), "alice", string(hashed))
 
-	h := handler.NewAuthHandler(userRepo, sessionRepo)
+	h := handler.NewAuthHandler(userRepo, sessionRepo, "", "")
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
 
@@ -72,7 +72,7 @@ func TestAuthHandler_Logout(t *testing.T) {
 
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
-	h := handler.NewAuthHandler(userRepo, sessionRepo)
+	h := handler.NewAuthHandler(userRepo, sessionRepo, "", "")
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
 

@@ -12,6 +12,7 @@ type UserRepository interface {
 	Create(ctx context.Context, username, passwordHash string) (*model.User, error)
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
 	GetByID(ctx context.Context, id int64) (*model.User, error)
+	UpdatePassword(ctx context.Context, id int64, passwordHash string) error
 }
 
 type SessionRepository interface {
@@ -91,6 +92,12 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 	}
 	user.CreatedAt, _ = parseDBTime(createdAtStr)
 	return &user, nil
+}
+
+func (r *userRepository) UpdatePassword(ctx context.Context, id int64, passwordHash string) error {
+	query := `UPDATE users SET password_hash = ? WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, passwordHash, id)
+	return err
 }
 
 type sessionRepository struct {

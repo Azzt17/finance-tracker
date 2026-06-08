@@ -50,7 +50,7 @@ func NewRouter(config Config) http.Handler {
 	analytics := NewAnalyticsHandler(repository.NewAnalyticsRepository(config.DB))
 	analytics.RegisterRoutes(mux)
 
-	auth := NewAuthHandler(repository.NewUserRepository(config.DB), repository.NewSessionRepository(config.DB))
+	auth := NewAuthHandler(repository.NewUserRepository(config.DB), repository.NewSessionRepository(config.DB), config.AuthUsername, config.AuthPassword)
 	auth.RegisterRoutes(mux)
 
 	system := &SystemHandler{Config: config}
