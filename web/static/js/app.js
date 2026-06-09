@@ -199,6 +199,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async register(username, password) {
+            if (username.length < 3 || password.length < 6) {
+                this.showFeedback("❌ Username min 3, Password min 6 char", true);
+                return;
+            }
+            this.isLoading = true;
+            try {
+                const res = await window.fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (res.ok) {
+                    this.showFeedback("✓ Register Berhasil");
+                    this.currentView = 'dashboard';
+                    await this.loadInitialData();
+                } else {
+                    this.showFeedback("❌ Register Gagal (Username terpakai)", true);
+                }
+            } catch(e) {
+                this.showFeedback("❌ Network Error", true);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
         async logout() {
             if (!confirm("Keluar dari aplikasi? Data offline Anda akan dihapus demi keamanan.")) return;
             try {

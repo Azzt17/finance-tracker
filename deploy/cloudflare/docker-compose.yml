@@ -8,6 +8,9 @@ services:
       DATABASE_URL: "file:/data/finance-tracker.db?_foreign_keys=on&_busy_timeout=5000"
       APP_USERNAME: "${APP_USERNAME}"
       APP_PASSWORD: "${APP_PASSWORD}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      GOOGLE_CALLBACK_URL: "${GOOGLE_CALLBACK_URL}"
     volumes:
       - finance_data:/data
     ports:
