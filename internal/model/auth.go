@@ -12,6 +12,8 @@ type User struct {
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"-"`
 	Role         string    `json:"role"`
+	Email        *string   `json:"email"`
+	GoogleID     *string   `json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

@@ -14,6 +14,8 @@ import (
 	"github.com/Azzt17/finance-tracker/internal/handler"
 	"github.com/Azzt17/finance-tracker/internal/service"
 	"github.com/Azzt17/finance-tracker/web"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 var version = "dev"
@@ -50,6 +52,20 @@ func main() {
 	service.StartBackupCron(db, databaseURL)
 	slog.Info("automated backup service started")
 
+	var oauthConf *oauth2.Config
+	if clientID := os.Getenv("GOOGLE_CLIENT_ID"); clientID != "" {
+		oauthConf = &oauth2.Config{
+			ClientID:     clientID,
+			ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+			RedirectURL:  os.Getenv("GOOGLE_CALLBACK_URL"),
+			Scopes: []string{
+				"https://www.googleapis.com/auth/userinfo.email",
+				"https://www.googleapis.com/auth/userinfo.profile",
+			},
+			Endpoint: google.Endpoint,
+		}
+	}
+
 	server := &http.Server{
 		Addr: addr,
 		Handler: handler.NewRouter(handler.Config{
@@ -59,6 +75,7 @@ func main() {
 			AuthPassword: os.Getenv("APP_PASSWORD"),
 			Version:      version,
 			DatabaseURL:  databaseURL,
+			OAuthConfig:  oauthConf,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}

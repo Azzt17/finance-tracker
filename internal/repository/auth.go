@@ -10,7 +10,9 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, username, passwordHash string) (*model.User, error)
+	CreateOAuthUser(ctx context.Context, username, email, googleID string) (*model.User, error)
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	GetByGoogleID(ctx context.Context, googleID string) (*model.User, error)
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	UpdatePassword(ctx context.Context, id int64, passwordHash string) error
 }
@@ -34,7 +36,7 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 	query := `
 		INSERT INTO users (username, password_hash)
 		VALUES (?, ?)
-		RETURNING id, username, password_hash, role, created_at
+		RETURNING id, username, password_hash, role, email, google_id, created_at
 	`
 	var user model.User
 	var createdAtStr string
@@ -43,6 +45,32 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 		&user.Username,
 		&user.PasswordHash,
 		&user.Role,
+		&user.Email,
+		&user.GoogleID,
+		&createdAtStr,
+	)
+	if err != nil {
+		return nil, err
+	}
+	user.CreatedAt, _ = parseDBTime(createdAtStr)
+	return &user, nil
+}
+
+func (r *userRepository) CreateOAuthUser(ctx context.Context, username, email, googleID string) (*model.User, error) {
+	query := `
+		INSERT INTO users (username, password_hash, email, google_id)
+		VALUES (?, '', ?, ?)
+		RETURNING id, username, password_hash, role, email, google_id, created_at
+	`
+	var user model.User
+	var createdAtStr string
+	err := r.db.QueryRowContext(ctx, query, username, email, googleID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Role,
+		&user.Email,
+		&user.GoogleID,
 		&createdAtStr,
 	)
 	if err != nil {
@@ -53,7 +81,7 @@ func (r *userRepository) Create(ctx context.Context, username, passwordHash stri
 }
 
 func (r *userRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
-	query := `SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?`
+	query := `SELECT id, username, password_hash, role, email, google_id, created_at FROM users WHERE username = ?`
 	var user model.User
 	var createdAtStr string
 	err := r.db.QueryRowContext(ctx, query, username).Scan(
@@ -61,6 +89,31 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 		&user.Username,
 		&user.PasswordHash,
 		&user.Role,
+		&user.Email,
+		&user.GoogleID,
+		&createdAtStr,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	user.CreatedAt, _ = parseDBTime(createdAtStr)
+	return &user, nil
+}
+
+func (r *userRepository) GetByGoogleID(ctx context.Context, googleID string) (*model.User, error) {
+	query := `SELECT id, username, password_hash, role, email, google_id, created_at FROM users WHERE google_id = ?`
+	var user model.User
+	var createdAtStr string
+	err := r.db.QueryRowContext(ctx, query, googleID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Role,
+		&user.Email,
+		&user.GoogleID,
 		&createdAtStr,
 	)
 	if err != nil {
@@ -74,7 +127,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
-	query := `SELECT id, username, password_hash, role, created_at FROM users WHERE id = ?`
+	query := `SELECT id, username, password_hash, role, email, google_id, created_at FROM users WHERE id = ?`
 	var user model.User
 	var createdAtStr string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
@@ -82,6 +135,8 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 		&user.Username,
 		&user.PasswordHash,
 		&user.Role,
+		&user.Email,
+		&user.GoogleID,
 		&createdAtStr,
 	)
 	if err != nil {

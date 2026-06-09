@@ -37,6 +37,11 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 			name:    "add_user_roles",
 			path:    "migrations/000004_add_user_roles.up.sql",
 		},
+		{
+			version: 5,
+			name:    "add_oauth_to_users",
+			path:    "migrations/000005_add_oauth_to_users.up.sql",
+		},
 	}
 
 	if _, err := db.ExecContext(ctx, `

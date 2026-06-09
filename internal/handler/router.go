@@ -8,6 +8,7 @@ import (
 	"github.com/Azzt17/finance-tracker/internal/middleware"
 	"github.com/Azzt17/finance-tracker/internal/model"
 	"github.com/Azzt17/finance-tracker/internal/repository"
+	"golang.org/x/oauth2"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ type Config struct {
 	AuthPassword string
 	Version      string
 	DatabaseURL  string
+	OAuthConfig  *oauth2.Config
 }
 
 func NewRouter(config Config) http.Handler {
@@ -50,7 +52,7 @@ func NewRouter(config Config) http.Handler {
 	analytics := NewAnalyticsHandler(repository.NewAnalyticsRepository(config.DB))
 	analytics.RegisterRoutes(mux)
 
-	auth := NewAuthHandler(repository.NewUserRepository(config.DB), repository.NewSessionRepository(config.DB), config.AuthUsername, config.AuthPassword)
+	auth := NewAuthHandler(repository.NewUserRepository(config.DB), repository.NewSessionRepository(config.DB), config.AuthUsername, config.AuthPassword, config.OAuthConfig)
 	auth.RegisterRoutes(mux)
 
 	system := &SystemHandler{Config: config}
@@ -85,6 +87,9 @@ func NewRouter(config Config) http.Handler {
 		"/static/css/*",
 		"/internal/*",
 		"/api/v1/auth/login",
+		"/api/v1/auth/register",
+		"/api/v1/auth/google",
+		"/api/v1/auth/google/callback",
 	)(app)
 
 	return middleware.Recoverer(middleware.Logger(app))
