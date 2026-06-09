@@ -14,6 +14,7 @@ import (
 	"github.com/Azzt17/finance-tracker/internal/handler"
 	"github.com/Azzt17/finance-tracker/internal/service"
 	"github.com/Azzt17/finance-tracker/web"
+	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -21,6 +22,9 @@ import (
 var version = "dev"
 
 func main() {
+	// Attempt to load .env file if it exists
+	_ = godotenv.Load()
+
 	addr := env("ADDR", ":8080")
 	databaseURL := databaseURL()
 
