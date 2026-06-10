@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"context"
 	"fmt"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 type ExportRepository interface {
 	GetAggregation(ctx context.Context, userID int64, yearMonth string) (model.BudgetAggregation, error)
 	ListTransactions(ctx context.Context, userID int64, yearMonth string) ([]model.Transaction, error)
+	ExportFullData(ctx context.Context, userID int64) (model.UserDataExport, error)
+	ImportFullData(ctx context.Context, userID int64, data model.UserDataExport) error
 }
 
 type ExportHandler struct {
@@ -26,6 +29,8 @@ func NewExportHandler(repository ExportRepository) *ExportHandler {
 
 func (h *ExportHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/export/markdown", h.exportMarkdown)
+	mux.HandleFunc("GET /api/v1/export/json", h.exportJSON)
+	mux.HandleFunc("POST /api/v1/import/json", h.importJSON)
 }
 
 func (h *ExportHandler) exportMarkdown(w http.ResponseWriter, r *http.Request) {
@@ -74,4 +79,43 @@ func (h *ExportHandler) exportMarkdown(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"export-%s.md\"", yearMonth))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
+}
+
+func (h *ExportHandler) exportJSON(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserFromContext(r.Context()).ID
+	
+	data, err := h.repository.ExportFullData(r.Context(), userID)
+	if err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"finance-tracker-backup.json\"")
+	
+	importBytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to encode JSON"})
+		return
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(importBytes)
+}
+
+func (h *ExportHandler) importJSON(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserFromContext(r.Context()).ID
+
+	var data model.UserDataExport
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON format"})
+		return
+	}
+
+	if err := h.repository.ImportFullData(r.Context(), userID, data); err != nil {
+		writeRepositoryError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "data imported successfully"})
 }
