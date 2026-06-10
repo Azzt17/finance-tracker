@@ -83,3 +83,10 @@ type SavingsGoalInput struct {
 	YearMonth    string `json:"year_month"`
 	IsAchieved   bool   `json:"is_achieved"`
 }
+
+type UserDataExport struct {
+	Categories   []Category         `json:"categories"`
+	Transactions []Transaction      `json:"transactions"`
+	Budgets      []BudgetAllocation `json:"budgets"`
+	SavingsGoals []SavingsGoal      `json:"savings_goals"`
+}

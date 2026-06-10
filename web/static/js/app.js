@@ -488,6 +488,46 @@ document.addEventListener('alpine:init', () => {
         exportMarkdown() {
             window.location.href = `/api/v1/export/markdown?year_month=${this.currentMonth}`;
         },
+        exportJSON() {
+            window.location.href = `/api/v1/export/json`;
+        },
+        async importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const jsonContent = e.target.result;
+                    // Validate JSON locally before sending
+                    JSON.parse(jsonContent);
+
+                    this.isLoading = true;
+                    const res = await this.apiFetch('/api/v1/import/json', {
+                        method: 'POST',
+                        body: jsonContent
+                    });
+                    
+                    if (res && res.status === 'ok') {
+                        alert('Data berhasil diimpor!');
+                        // Refresh data
+                        await Promise.all([
+                            this.fetchCategories(),
+                            this.fetchTransactions(),
+                            this.fetchBudget(),
+                            this.fetchSavings(),
+                            this.fetchAnalytics()
+                        ]);
+                    }
+                } catch (err) {
+                    alert('Gagal mengimpor file: ' + err.message);
+                } finally {
+                    this.isLoading = false;
+                    event.target.value = ''; // Reset input
+                }
+            };
+            reader.readAsText(file);
+        },
         async updateOfflineStatus(status) {
             this.isOffline = status;
             if (!status && this.pendingSync > 0) {

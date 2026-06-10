@@ -234,9 +234,16 @@
 
         <!-- VIEW: HISTORY -->
         <div x-cloak x-show="$store.finance.currentView === 'history'">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                 <h1>Riwayat</h1>
-                <button class="outline" style="width: auto; padding: 0.25rem 0.75rem; font-size: 12px;" @click="$store.finance.exportMarkdown()">⬇️ Export</button>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="outline" style="width: auto; padding: 0.25rem 0.75rem; font-size: 12px;" @click="$store.finance.exportMarkdown()">⬇️ Markdown</button>
+                    <button class="outline" style="width: auto; padding: 0.25rem 0.75rem; font-size: 12px;" @click="$store.finance.exportJSON()">⬇️ JSON Data</button>
+                    <label for="import-json" class="outline button" style="width: auto; padding: 0.25rem 0.75rem; font-size: 12px; margin: 0; cursor: pointer;">
+                        ⬆️ Import JSON
+                        <input type="file" id="import-json" accept=".json" style="display: none;" @change="$store.finance.importJSON($event)">
+                    </label>
+                </div>
             </div>
 
             <template x-if="$store.finance.recentTransactions.length === 0">
